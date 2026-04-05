@@ -1,0 +1,227 @@
+{
+  "speaker": "Life Community Church Of Roseville",
+  "source": "https://youtu.be/YA2CZzrgmsk?si=TToeBzghZnc9Bk0t",
+  "acoustic": {
+    "duration_min": 32.2,
+    "word_count": 3442,
+    "estimated_wpm": 107.0,
+    "filler_count": 88,
+    "filler_per_minute": 2.74,
+    "top_fillers": [
+      [
+        "right",
+        22
+      ],
+      [
+        "like",
+        19
+      ],
+      [
+        "so",
+        16
+      ],
+      [
+        "you know",
+        15
+      ],
+      [
+        "kind of",
+        7
+      ]
+    ],
+    "pause_count": 287,
+    "dynamic_range_db": 61.8,
+    "talk_ratio": 0.8,
+    "pitch_cv": 0.417,
+    "arc_pattern": "declining",
+    "arc_thirds": {
+      "start": 0.0402,
+      "middle": 0.0337,
+      "end": 0.0284
+    },
+    "wpm_score": 6,
+    "filler_score": 4,
+    "dynamic_range_score": 10,
+    "pause_score": 7,
+    "vocal_variety_score": 10,
+    "talk_silence_score": 10,
+    "energy_arc_score": 4
+  },
+  "analysis": {
+    "sermon_title": "Walk Humbly: Covenant Faithfulness Over Dividing Lines",
+    "passage": "Micah 6:8",
+    "bottom_line": "The kingdom of God is not built on dividing lines but on covenant faithfulness \u2014 walk humbly with your God and move toward the overlooked.",
+    "big_idea": "True covenant faithfulness, rooted in humility, compels us to abandon the dividing lines we draw and instead reflect God's heart by moving toward people the way Jesus did.",
+    "sticky_statement": "The bottom line is heartfelt and thematically rich, but it is slightly too long and compound to be instantly portable \u2014 a shorter version like 'Stop drawing lines; start walking humbly' would travel further.",
+    "encouragement": "This preacher has a genuine pastoral warmth and relational authenticity that makes the congregation feel safe and seen \u2014 the personal asides and self-deprecating humor build real connection without undermining the message. The Micah 6:8 exposition is thoughtful, historically grounded, and theologically layered, successfully weaving together justice, mercy, and humility as an integrated whole rather than three disconnected points. The playground/kickball illustration is a standout moment \u2014 concrete, emotionally resonant, and theologically loaded \u2014 and the return to it at the close creates a satisfying narrative arc.",
+    "coaching_priorities": [
+      "Reduce filler words (2.74/min is distracting): identify your top three fillers (likely 'you know,' 'right,' and 'man') and practice intentional pauses instead \u2014 silence communicates confidence and gives the congregation time to absorb truth.",
+      "Address the declining energy arc by front-loading energy management: build toward the cross illustration as your sermon's emotional and theological climax rather than letting momentum drift after the midpoint, and end with a strong, declarative close rather than a soft fade into the worship transition.",
+      "Make Jesus more explicitly central and earlier: the cross visualization near the end is powerful but arrives late \u2014 weave the person and work of Christ more concretely into the GOD section so the sermon's theological engine is Christ-centered from the beginning, not just in the final movement."
+    ],
+    "structure": {
+      "overall_score": 72,
+      "sections": [
+        {
+          "label": "ME",
+          "title": "Personal Hook",
+          "summary": "The preacher opens by noting the absence of his guitar and pivots to the universal frustration of unclear expectations in life and from God.",
+          "start_quote": "Man, I'm down here. I don't have a guitar in my hand.",
+          "word_count": 210,
+          "estimated_minutes": 2.0,
+          "score": 70,
+          "strength": "Disarming self-deprecating humor immediately lowers defenses and creates a warm, approachable tone.",
+          "growth": "The hook meanders through several ideas (guitar, expectations, follow your heart) before landing \u2014 tighten to one sharp opening tension to earn attention faster."
+        },
+        {
+          "label": "WE",
+          "title": "Universal Bridge",
+          "summary": "The preacher names the shared human longing for clarity \u2014 career, marriage, faith \u2014 and frames Israel's ancient struggle with religious ritual versus genuine relationship as our shared story.",
+          "start_quote": "I think one of the most common frustrations in life that we share universally",
+          "word_count": 420,
+          "estimated_minutes": 4.0,
+          "score": 75,
+          "strength": "The pivot from personal frustration to Israel's historical drift effectively universalizes the problem and builds empathy before the text is introduced.",
+          "growth": "The WE section doubles back on itself with the dividing-lines material appearing both here and later \u2014 consolidating this content would sharpen the sermon's logical flow."
+        },
+        {
+          "label": "GOD",
+          "title": "Biblical Text",
+          "summary": "Micah 6:8 is unpacked in its 8th-century BC context \u2014 political instability, religious ritual without relationship, covenant language from Leviticus \u2014 leading to an exposition of justice, mercy, and humility as integrated virtues.",
+          "start_quote": "He has shown you, O man, what is good, and what does the Lord require",
+          "word_count": 1180,
+          "estimated_minutes": 11.0,
+          "score": 78,
+          "strength": "The historical and covenant context is well-researched and communicated accessibly, and the three-part integration of justice, mercy, and humility as mutually dependent is theologically mature.",
+          "growth": "Jesus enters the section too briefly and too late \u2014 the Pharisee discussion is helpful but the cross needs to anchor the GOD section, not appear as an aside near the close."
+        },
+        {
+          "label": "YOU",
+          "title": "Application",
+          "summary": "The preacher calls listeners to embody humility by taking one step toward someone overlooked \u2014 one conversation, one meal, one 'I see you' \u2014 rather than maintaining dividing lines.",
+          "start_quote": "Maybe, just maybe, the kingdom of God grows not when we shout across divisional lines",
+          "word_count": 310,
+          "estimated_minutes": 3.0,
+          "score": 68,
+          "strength": "The 'one step toward someone' application is specific, actionable, and emotionally grounded in the sermon's central metaphor.",
+          "growth": "The YOU section needs a clearer, more concrete behavioral call \u2014 'move toward someone' is directionally right but listeners need one specific who, when, or how to walk out the door with."
+        },
+        {
+          "label": "WE2",
+          "title": "Vision / Sendoff",
+          "summary": "The preacher returns to the playground metaphor, reframes the kingdom of God as the faithful King moving toward the one always picked last, and closes with a prayer of surrender.",
+          "start_quote": "When we were kids, we stood in lines waiting to be chosen.",
+          "word_count": 380,
+          "estimated_minutes": 3.5,
+          "score": 74,
+          "strength": "The return to the kickball illustration as a kingdom image is emotionally powerful and theologically precise \u2014 it lands the sermon's central thesis in a memorable picture.",
+          "growth": "The closing prayer, while sincere, transitions too quickly into a worship song handoff and softens the declarative impact of the final send \u2014 consider ending with one strong statement of identity before the prayer."
+        }
+      ],
+      "flags": [
+        {
+          "severity": "warning",
+          "text": "Declining energy arc: sermon loses momentum after the midpoint and never fully recovers before the close \u2014 the cross illustration is the strongest moment but arrives too late and too briefly to reverse the trend."
+        },
+        {
+          "severity": "warning",
+          "text": "Dividing-lines material is introduced in the WE section and then re-introduced at length in the GOD section, creating structural redundancy and diluting the thrust of each section."
+        },
+        {
+          "severity": "info",
+          "text": "Jesus is invoked primarily as an example of humility (he moved toward people) rather than as the substitutionary Savior \u2014 the cross visualization is present but underdeveloped theologically."
+        },
+        {
+          "severity": "info",
+          "text": "Filler word density (2.74/min, 88 total) is high enough to undermine perceived authority and interrupt the congregation's processing of key theological moments."
+        }
+      ]
+    },
+    "vocal": {
+      "filler_words": {
+        "count": 88,
+        "per_minute": 2.74,
+        "examples": [
+          "you know",
+          "right",
+          "man"
+        ],
+        "score": 4,
+        "notes": "At 2.74 fillers per minute the verbal clutter is noticeable and chips away at the sermon's credibility and gravity, especially in high-stakes theological moments. The primary fix is replacing filler with intentional silence \u2014 a 1-second pause communicates confidence and invites reflection far better than 'you know.'"
+      },
+      "pace": {
+        "avg_wpm": 107.0,
+        "assessment": "slow",
+        "score": 4,
+        "notes": "107 WPM is below the conversational ideal of 130\u2013165 WPM and can inadvertently suggest tentativeness or lack of preparation, even when the content is strong. Slightly increasing pace in narrative and illustrative sections while slowing intentionally at key theological statements will create better contrast and energy."
+      },
+      "dynamic_range": {
+        "score": 10,
+        "db": 61.8,
+        "notes": "A dynamic range of 61.8 dB is excellent and indicates the preacher is using volume variation effectively to signal emotional and theological weight. This is a genuine vocal strength \u2014 lean into it intentionally at the sermon's climactic moments."
+      },
+      "pause_usage": {
+        "score": 7,
+        "count": 287,
+        "avg_duration_sec": 0.5,
+        "notes": "287 pauses over 32 minutes averages about 9 per minute, which is on the higher end and contributes to the slow pace feel \u2014 many pauses may be hesitation rather than rhetorical intent. Work to distinguish deliberate 'landing' pauses (after key statements) from filler-adjacent pauses that break momentum."
+      },
+      "pitch_variety": {
+        "score": 10,
+        "notes": "A pitch coefficient of variation of 0.417 is very high and reflects strong melodic expressiveness \u2014 the preacher's musical background is clearly an asset in vocal delivery. This variety keeps listeners engaged and should be maintained while being channeled toward theological high points."
+      },
+      "talk_to_silence_ratio": {
+        "score": 10,
+        "talk_pct": 80,
+        "notes": "An 80% talk ratio falls squarely in the ideal 78\u201392% range, meaning the sermon has a healthy rhythm of speech and silence. This is well-calibrated and should be preserved as pace and filler improvements are made."
+      },
+      "energy_arc": {
+        "score": 4,
+        "notes": "A declining energy arc means the sermon's most engaging energy was front-loaded and the congregation is likely experiencing diminishing engagement by the close \u2014 the opposite of what a strong finish requires. Restructure so that the cross illustration and kingdom-of-God vision in the final third serve as the sermon's emotional and theological peak."
+      }
+    },
+    "gospel_check": {
+      "jesus_as_hero": true,
+      "heart_level_application": true,
+      "behavior_change_present": true,
+      "redemptive_history_noted": true,
+      "nonchristian_accessible": true,
+      "notes": "The sermon has a genuine gospel orientation and Jesus is invoked meaningfully, particularly in the cross visualization and the image of the king moving toward the one picked last. However, Jesus functions primarily as the supreme example of humility rather than as the crucified and risen Savior whose atoning work is the power source for the life Micah 6:8 describes \u2014 the cross is shown but its substitutionary and redemptive significance is not unpacked. Strengthening the explicit gospel content in the GOD section would elevate this sermon from inspiring to transformative.",
+      "G_score": 7,
+      "G_note": "God is portrayed as a covenant-keeping, faithful, relationally broken-hearted Father who pursues his people \u2014 this is specific and emotionally resonant, though his holiness and justice could be further developed.",
+      "O_score": 7,
+      "O_note": "The human problem \u2014 religious ritual without relationship, drawing dividing lines, pride \u2014 is named clearly and illustrated with both historical and contemporary examples that resonate with real life.",
+      "S_score": 6,
+      "S_note": "Sin is named honestly as line-drawing, self-righteousness, and relational betrayal of God, and the preacher implicates the congregation ('we still draw those lines today'), though it stops short of the full weight of personal guilt before a holy God.",
+      "P_score": 8,
+      "P_note": "The kickball/playground illustration is outstanding \u2014 concrete, emotionally accessible, theologically loaded, and returned to effectively at the close \u2014 and the Pharisee reframe (protectors, not villains) demonstrates genuine craft.",
+      "E_score": 6,
+      "E_note": "Jesus is present and honored, particularly in the cross visualization, but the resurrection is absent and the cross is treated more as a display of humility than as the atoning event that makes covenant faithfulness possible for broken people.",
+      "L_score": 7,
+      "L_note": "The call to 'take one step toward someone this week' is grace-motivated, specific enough to be actionable, and flows from the sermon's theological core rather than from moralistic obligation.",
+      "gold_standard": "Partially",
+      "gold_standard_note": "The sermon has strong scores in illustration, application, and God's character, but the E score of 6 (Jesus not explicitly central enough as Savior, resurrection absent) prevents a 'Yes' verdict.",
+      "incomplete_flag": false
+    },
+    "rubric": {
+      "exegesis_theology": {
+        "context_set": 5,
+        "main_point_clear": 4,
+        "preached_jesus": 3,
+        "redemptive_history": 4
+      },
+      "application": {
+        "clear_helpful_application": 3,
+        "gospel_centered": 4,
+        "clear_response": 3,
+        "heart_care": 4,
+        "nonchristian_friendly": 4
+      },
+      "presentation": {
+        "engaging_intro": 3,
+        "clear_structure": 3,
+        "voice_inflection": 4
+      }
+    }
+  }
+}

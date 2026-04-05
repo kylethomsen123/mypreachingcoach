@@ -1,0 +1,301 @@
+class SermonPDF(FPDF):
+    M  = 15.0          # left / right margin
+    CW = 185.9         # usable content width (215.9 - 30)
+    RH = 6.0           # standard row height
+
+    def __init__(self):
+        super().__init__(orientation="P", unit="mm", format="Letter")
+        self._mono = None
+        fpath = _find_mono_font()
+        if fpath:
+            try:
+                self.add_font("Mono", "", fpath)
+                self._mono = "Mono"
+            except Exception:
+                pass
+        self.set_auto_page_break(auto=True, margin=18)
+        self.set_margins(self.M, self.M, self.M)
+        self._date = datetime.now().strftime("%B %d, %Y")
+
+    # ── Shared helpers ───────────────────────────────────────────────────────
+
+    def _bar_font(self, size=9):
+        """Switch to monospace font for block-char bars."""
+        if self._mono:
+            self.set_font(self._mono, "", size)
+        else:
+            self.set_font("Courier", "", size)
+
+    def _bar_row(self, score, maxv=10, width=10, cell_w=None, h=6):
+        """Print one bar row using Courier/Mono font, full cell_w wide."""
+        if cell_w is None:
+            cell_w = self.CW
+        self._bar_font(9)
+        self.cell(cell_w, h, _bar(score, maxv, width),
+                  new_x="LMARGIN", new_y="NEXT")
+        self.set_font("Helvetica", "", 10)
+
+    def footer(self):
+        self.set_y(-12)
+        self.set_font("Helvetica", "I", 8)
+        self.set_text_color(*C_DGRAY)
+        self.cell(0, 5,
+                  f"My Preaching Coach  |  AI-Powered Sermon Evaluation  |  Page {self.page_no()}",
+                  align="C")
+        self.set_text_color(0, 0, 0)
+
+    def _hdr(self, right: str):
+        """Navy header band + thin rule below."""
+        self.set_fill_color(*C_NAVY)
+        self.rect(self.M, self.M, self.CW, 8, "F")
+        self.set_xy(self.M, self.M + 0.5)
+        self.set_font("Helvetica", "B", 9)
+        self.set_text_color(255, 255, 255)
+        self.cell(self.CW / 2, 7, "My Preaching Coach")
+        self.cell(self.CW / 2, 7, safe(right), align="R")
+        self.set_text_color(0, 0, 0)
+        self.set_draw_color(*C_MGRAY)
+        self.set_line_width(0.3)
+        ry = self.M + 8.5
+        self.line(self.M, ry, self.M + self.CW, ry)
+        self.set_line_width(0.2)
+        self.set_draw_color(0, 0, 0)
+        self.set_xy(self.M, ry + 2)
+
+    def _rule(self, thick=0.2):
+        y = self.get_y()
+        self.set_draw_color(*C_MGRAY)
+        self.set_line_width(thick)
+        self.line(self.M, y, self.M + self.CW, y)
+        self.set_line_width(0.2)
+        self.set_draw_color(0, 0, 0)
+        self.ln(2)
+
+    def _gray_bar(self, title: str, gap=2):
+        """Light-gray section header band."""
+        if gap:
+            self.ln(gap)
+        self.set_fill_color(*C_LGRAY)
+        self.set_font("Helvetica", "B", 10)
+        self.cell(self.CW, 7, "  " + safe(title), fill=True,
+                  new_x="LMARGIN", new_y="NEXT")
+        self.ln(1)
+
+    def _box(self, label: str, text: str):
+        """Gray-filled label row + text row."""
+        self.set_fill_color(*C_LGRAY)
+        self.set_font("Helvetica", "B", 10)
+        self.cell(self.CW, 6, safe(label), fill=True,
+                  new_x="LMARGIN", new_y="NEXT")
+        self.set_fill_color(255, 255, 255)
+        self.set_font("Helvetica", "", 10)
+        self.multi_cell(self.CW, 6, safe(text))
+        self.ln(1)
+
+    # ── PAGE 1: Cover ────────────────────────────────────────────────────────
+
+    def page1(self, speaker, source_label, analysis, acoustic, totals):
+        self.add_page()
+        self._hdr(self._date)
+
+        ev = analysis
+        gc = ev.get("gospel_check", {})
+        secs = ev.get("structure", {}).get("sections", [])
+
+        # Overall score
+        struct_avg  = (sum(s.get("score", 0) for s in secs) / len(secs)) if secs else 0
+        gospel_norm = totals["total"] / 60.0 * 10
+        va = ev.get("vocal", {})
+        v_sc = [
+            va.get("filler_words",         {}).get("score", acoustic.get("filler_score",        5)),
+            va.get("pace",                  {}).get("score", acoustic.get("wpm_score",           5)),
+            va.get("dynamic_range",         {}).get("score", acoustic.get("dynamic_range_score", 5)),
+            va.get("pause_usage",           {}).get("score", acoustic.get("pause_score",         5)),
+            va.get("pitch_variety",         {}).get("score", acoustic.get("vocal_variety_score", 5)),
+            va.get("talk_to_silence_ratio", {}).get("score", acoustic.get("talk_silence_score",  5)),
+            va.get("energy_arc",            {}).get("score", acoustic.get("energy_arc_score",    5)),
+        ]
+        vocal_avg = sum(v_sc) / len(v_sc)
+        overall   = round((struct_avg + gospel_norm + vocal_avg) / 3, 1)
+
+        # Title (centered, 18pt bold)
+        self.set_font("Helvetica", "B", 18)
+        self.multi_cell(self.CW, 10, safe(ev.get("sermon_title", "Untitled Sermon")), align="C")
+        self.ln(1)
+
+        # Passage | Preacher | Source (centered, gray)
+        gs = gc.get("gold_standard", "Partially")
+        self.set_font("Helvetica", "", 10)
+        self.set_text_color(*C_DGRAY)
+        meta = (f"{ev.get('passage', '')}  |  Preacher: {speaker}  |  Source: {source_label}")
+        self.multi_cell(self.CW, 6, safe(meta), align="C")
+        self.set_text_color(0, 0, 0)
+        self.ln(3)
+        self._rule()
+
+        # Score badges (side by side)
+        gs_col   = C_GREEN if gs == "Yes" else (C_NAVY if gs == "Partially" else C_RED)
+        BADGE_W  = (self.CW - 6) / 2
+        by       = self.get_y()
+
+        # Left badge: overall score
+        self.set_fill_color(*C_NAVY)
+        self.rect(self.M, by, BADGE_W, 22, "F")
+        self.set_text_color(255, 255, 255)
+        self.set_xy(self.M, by + 2)
+        self.set_font("Helvetica", "B", 8)
+        self.cell(BADGE_W, 5, "OVERALL SCORE", align="C", new_x="LMARGIN", new_y="NEXT")
+        self.set_xy(self.M, by + 8)
+        self.set_font("Helvetica", "B", 26)
+        self.cell(BADGE_W, 14, f"{overall}/10", align="C", new_x="LMARGIN", new_y="NEXT")
+
+        # Right badge: gospel score
+        self.set_fill_color(*gs_col)
+        self.rect(self.M + BADGE_W + 6, by, BADGE_W, 22, "F")
+        self.set_xy(self.M + BADGE_W + 6, by + 2)
+        self.set_font("Helvetica", "B", 8)
+        self.cell(BADGE_W, 5, "GOSPEL SCORE", align="C", new_x="LMARGIN", new_y="NEXT")
+        self.set_xy(self.M + BADGE_W + 6, by + 8)
+        self.set_font("Helvetica", "B", 20)
+        self.cell(BADGE_W, 9, f"{totals['total']}/60", align="C", new_x="LMARGIN", new_y="NEXT")
+        self.set_xy(self.M + BADGE_W + 6, by + 17)
+        self.set_font("Helvetica", "B", 10)
+        self.cell(BADGE_W, 5, gs, align="C", new_x="LMARGIN", new_y="NEXT")
+
+        self.set_text_color(0, 0, 0)
+        self.set_y(by + 25)
+        self._rule()
+
+        # Big Idea / Sticky Statement / Bottom Line boxes
+        self._box("BIG IDEA", ev.get("big_idea", ""))
+        self._box("STICKY STATEMENT", ev.get("sticky_statement", ""))
+        self._box("BOTTOM LINE", ev.get("bottom_line", ""))
+        self._rule()
+
+        # Encouragement
+        self._gray_bar("Encouragement", gap=0)
+        self.set_font("Helvetica", "", 10)
+        self.multi_cell(self.CW, 6, safe(ev.get("encouragement", "")))
+        self.ln(2)
+        self._rule()
+
+        # Coaching priorities
+        self._gray_bar("Top 3 Coaching Priorities", gap=0)
+        for i, p in enumerate(ev.get("coaching_priorities", [])[:3], 1):
+            self.set_font("Helvetica", "B", 10)
+            self.cell(8, 6, f"{i}.")
+            self.set_font("Helvetica", "", 10)
+            self.multi_cell(self.CW - 8, 6, safe(p))
+            self.ln(1)
+
+    # ── PAGE 2: Vocal Delivery ───────────────────────────────────────────────
+
+    def page2(self, acoustic, vocal_analysis):
+        self.add_page()
+        self._hdr("Vocal Delivery")
+
+        self.set_font("Helvetica", "B", 12)
+        self.cell(self.CW, 7, "Vocal Delivery -- 7 Elements (measured from audio)",
+                  new_x="LMARGIN", new_y="NEXT")
+        self.set_font("Helvetica", "I", 9)
+        self.set_text_color(*C_DGRAY)
+        self.cell(self.CW, 5,
+                  "Scores derived from acoustic analysis -- not inferred from transcript text.",
+                  new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+        self.ln(1)
+
+        a   = acoustic
+        va  = vocal_analysis
+        pct = round(a["talk_ratio"] * 100)
+        tops = ", ".join(f'"{w}"({c}x)' for w, c in a["top_fillers"][:4]) or "none"
+
+        self.set_font("Helvetica", "", 9)
+        self.set_text_color(*C_DGRAY)
+        self.multi_cell(self.CW, 5,
+            f"Duration: {a['duration_min']} min  |  Words: {a['word_count']:,}  |  "
+            f"WPM: {a['estimated_wpm']}  |  Pauses: {a['pause_count']}  |  "
+            f"Dynamic Range: {a['dynamic_range_db']} dB")
+        self.set_text_color(0, 0, 0)
+        self.ln(1)
+        self._rule()
+
+        pause_meas = (
+            f"{a['pause_count']} pauses ({a['pause_count']/a['duration_min']:.1f}/min)"
+            if a["duration_min"] else f"{a['pause_count']} pauses"
+        )
+        elements = [
+            ("1. Filler Words",
+             f"{a['filler_count']} total ({a['filler_per_minute']}/min)  Top: {tops}",
+             va.get("filler_words",         {}).get("score", a["filler_score"]),
+             va.get("filler_words",         {}).get("notes", "")),
+            ("2. Speaking Rate",
+             f"{a['estimated_wpm']} wpm",
+             va.get("pace",                 {}).get("score", a["wpm_score"]),
+             va.get("pace",                 {}).get("notes", "")),
+            ("3. Dynamic Range",
+             f"{a['dynamic_range_db']} dB",
+             va.get("dynamic_range",        {}).get("score", a["dynamic_range_score"]),
+             va.get("dynamic_range",        {}).get("notes", "")),
+            ("4. Pause Usage",
+             pause_meas,
+             va.get("pause_usage",          {}).get("score", a["pause_score"]),
+             va.get("pause_usage",          {}).get("notes", "")),
+            ("5. Pitch Variety",
+             f"variation index = {a['pitch_cv']:.3f}",
+             va.get("pitch_variety",        {}).get("score", a["vocal_variety_score"]),
+             va.get("pitch_variety",        {}).get("notes", "")),
+            ("6. Talk-to-Silence",
+             f"{pct}% talking / {100-pct}% silence",
+             va.get("talk_to_silence_ratio",{}).get("score", a["talk_silence_score"]),
+             va.get("talk_to_silence_ratio",{}).get("notes", "")),
+            ("7. Energy Arc",
+             a["arc_pattern"].replace("-", " ").title(),
+             va.get("energy_arc",           {}).get("score", a["energy_arc_score"]),
+             va.get("energy_arc",           {}).get("notes", "")),
+        ]
+
+        scores = [e[2] for e in elements]
+        avg    = round(sum(scores) / len(scores), 1) if scores else 0
+
+        for name, measurement, score, note in elements:
+            sc = C_GREEN if score >= 8 else (C_RED if score <= 4 else C_NAVY)
+
+            # Name + score on one line
+            self.set_font("Helvetica", "B", 11)
+            self.cell(self.CW - 18, 7, safe(name))
+            self.set_text_color(*sc)
+            self.cell(18, 7, f"{score}/10", align="R", new_x="LMARGIN", new_y="NEXT")
+            self.set_text_color(0, 0, 0)
+
+            # Score bar: Courier/Mono, "█"*score + "░"*(10-score)
+            self._bar_row(score, 10, 10, self.CW)
+
+            # Measurement (italic, gray)
+            self.set_font("Helvetica", "I", 9)
+            self.set_text_color(*C_DGRAY)
+            self.multi_cell(self.CW, 5, safe(measurement))
+            self.set_text_color(0, 0, 0)
+
+            # Narrative note
+            self.set_font("Helvetica", "", 9)
+            self.multi_cell(self.CW, 5, safe(note))
+            self.ln(1)
+            self._rule()
+
+        # Average
+        sc = C_GREEN if avg >= 7 else (C_RED if avg <= 4 else C_NAVY)
+        self.set_font("Helvetica", "B", 11)
+        self.cell(self.CW - 25, 7, "Vocal Average")
+        self.set_text_color(*sc)
+        self.cell(25, 7, f"{avg}/10", align="R", new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+
+    # ── PAGE 3: Sermon Structure ─────────────────────────────────────────────
+
+    def page3(self, analysis):
+        self.add_page()
+        self._hdr("Sermon Structure")
+
+        self.set_font("Helvetica", "B", 12)
+        self.cell(self.CW, 7,

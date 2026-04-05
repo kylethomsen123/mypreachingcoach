@@ -1,0 +1,231 @@
+{
+  "speaker": "Lance Hahn",
+  "source": "https://www.youtube.com/watch?v=qT1HmeLQnOg",
+  "acoustic": {
+    "duration_min": 42.4,
+    "word_count": 7177,
+    "estimated_wpm": 169.2,
+    "filler_count": 276,
+    "filler_per_minute": 6.51,
+    "top_fillers": [
+      [
+        "right",
+        84
+      ],
+      [
+        "so",
+        83
+      ],
+      [
+        "like",
+        49
+      ],
+      [
+        "okay",
+        22
+      ],
+      [
+        "you know",
+        14
+      ]
+    ],
+    "pause_count": 452,
+    "dynamic_range_db": 55.5,
+    "talk_ratio": 0.8,
+    "pitch_cv": 0.348,
+    "arc_pattern": "declining",
+    "arc_thirds": {
+      "start": 0.0361,
+      "middle": 0.032,
+      "end": 0.0314
+    },
+    "wpm_score": 8,
+    "filler_score": 2,
+    "dynamic_range_score": 10,
+    "pause_score": 5,
+    "vocal_variety_score": 10,
+    "talk_silence_score": 10,
+    "energy_arc_score": 4
+  },
+  "analysis": {
+    "sermon_title": "Broken Cisterns: What Are We Trading Our Lives For?",
+    "passage": "Jeremiah 2:4-5, 13; 10:11-15; 9:23",
+    "bottom_line": "You were made to drink from a living fountain, not a broken cistern you built yourself.",
+    "central_idea": "Idolatry is misplaced trust \u2014 trading the living God for self-made substitutes that ultimately cannot satisfy \u2014 and true freedom comes from resetting our lives toward God as our ultimate source.",
+    "sticky_statement": "The cistern image is vivid and memorable, but the bottom line lacks a single portable phrase that listeners will carry home and repeat.",
+    "encouragement": "Lance is a gifted diagnostician who earns the right to challenge his congregation through honest self-disclosure \u2014 his 'Netflix vs. quiet place' confession is disarming and winsome. His use of concrete metrics (calendar, checkbook) to expose true values is pedagogically sharp and practically transferable. The seven-idol taxonomy gives listeners a clear, personalized framework that makes abstract theological concepts immediately actionable.",
+    "growth_edges": [
+      "Jesus is functionally absent as the redemptive solution: the sermon diagnoses idolatry well but never lands on the cross or resurrection as the power that breaks it \u2014 listeners are left with 'follow God' rather than 'Christ has already done what the idols never could.'",
+      "Filler word frequency (6.51/min) and a declining energy arc undermine the sermon's cumulative weight; the most important theological moments arrive with less vocal energy than the illustrative warm-up sections, robbing the landing of its force.",
+      "The expository method is loosely tethered: three widely-separated Jeremiah passages are cited but not worked through exegetically \u2014 the historical context of exile, covenant lawsuit, and the 'two evils' structure of 2:13 are named but not developed, leaving the text as illustration rather than authority."
+    ],
+    "structure": {
+      "overall_score": 6,
+      "sections": [
+        {
+          "label": "ME",
+          "title": "Personal Hook",
+          "summary": "The preacher introduces himself as analytical and practical, framing the sermon as a self-diagnostic exercise about life goals.",
+          "start_quote": "All right, we're gonna dive into the word of God. How about",
+          "word_count": 320,
+          "estimated_minutes": 1.9,
+          "score": 7,
+          "strength": "Transparent framing of the preacher's own thinking style builds rapport and sets audience expectations.",
+          "growth": "The meta-commentary about preaching style delays the actual hook; a sharper opening tension would accelerate engagement."
+        },
+        {
+          "label": "WE",
+          "title": "Universal Bridge",
+          "summary": "A series of self-diagnostic questions \u2014 about life goals, calendar, and spending \u2014 surfaces what people are actually trading their lives for.",
+          "start_quote": "What do you want out of life? What are your life goals?",
+          "word_count": 1850,
+          "estimated_minutes": 11.0,
+          "score": 8,
+          "strength": "The calendar-and-checkbook diagnostic is concrete, non-judgmental, and genuinely revelatory for most listeners.",
+          "growth": "This section runs long and risks losing momentum before the text is even opened; tightening by 3-4 minutes would sharpen its punch."
+        },
+        {
+          "label": "GOD",
+          "title": "Biblical Text",
+          "summary": "Three Jeremiah passages are read to establish the fountain/cistern metaphor, God's incomparable power, and the folly of idols.",
+          "start_quote": "Hear the word of Yahweh, O house of Jacob, and all the clans",
+          "word_count": 1400,
+          "estimated_minutes": 8.3,
+          "score": 5,
+          "strength": "The fountain/cistern image is handled with genuine affection and the imagery is communicated vividly.",
+          "growth": "The passages are read and illustrated but not exegeted \u2014 the covenant lawsuit context, the meaning of 'worthlessness,' and the two-evil structure of verse 13 are left undeveloped, weakening expository credibility."
+        },
+        {
+          "label": "YOU",
+          "title": "Application",
+          "summary": "A seven-category taxonomy of common idols (money, fame, power, human providers, relationships, religious systems, self) invites listeners to identify their own misplaced trust.",
+          "start_quote": "Number one, money. Now this is, it gets a lot of the stuff",
+          "word_count": 2100,
+          "estimated_minutes": 12.4,
+          "score": 7,
+          "strength": "The seven-idol list is specific, culturally current, and practically memorable \u2014 especially the 'influencer' category for younger listeners.",
+          "growth": "Application stays largely diagnostic (naming the idols) without providing grace-motivated, concrete next steps for how to actually reorient trust toward God."
+        },
+        {
+          "label": "WE2",
+          "title": "Vision / Sendoff",
+          "summary": "The sermon closes with Jeremiah 9:23, a call to boast only in knowing God, followed by a prayer of rededication and invitation to the prayer team.",
+          "start_quote": "Thus says the Lord. Let not the wise man boast in his wisdom.",
+          "word_count": 520,
+          "estimated_minutes": 3.1,
+          "score": 5,
+          "strength": "Jeremiah 9:23 is a beautiful, well-chosen closing text that reframes the entire sermon's diagnostic work around knowing God.",
+          "growth": "The sendoff arrives abruptly and without a Christ-centered escalation \u2014 the closing prayer does more theological heavy lifting than the sermon's final movement, and Jesus is never named as the one who makes knowing God possible."
+        }
+      ],
+      "flags": [
+        {
+          "severity": "warning",
+          "text": "Jesus is not named or made central in any section; the gospel solution to idolatry is never explicitly connected to the cross or resurrection."
+        },
+        {
+          "severity": "warning",
+          "text": "Energy arc is declining \u2014 the sermon's warmest, most energetic delivery is in the illustrative opening, not at the biblical or applicational climax."
+        },
+        {
+          "severity": "warning",
+          "text": "Expository claim is underfulfilled: three passages are cited across widely separated chapters without sustained exegetical engagement with any single text."
+        },
+        {
+          "severity": "info",
+          "text": "Filler word rate of 6.51/min is high enough to erode perceived authority, particularly during key theological statements."
+        }
+      ]
+    },
+    "vocal": {
+      "filler_words": {
+        "count": 276,
+        "per_minute": 6.51,
+        "examples": [
+          "right",
+          "okay",
+          "like"
+        ],
+        "score": 2,
+        "notes": "At 6.51 fillers per minute, verbal hedging is constant and significantly undermines the preacher's authority, especially on declarative theological statements. Targeted slow-down and deliberate pause practice at transition points would reduce this markedly."
+      },
+      "pace": {
+        "avg_wpm": 169.2,
+        "assessment": "ideal",
+        "score": 10,
+        "notes": "169 WPM sits comfortably in the optimal comprehension window and reflects a natural, conversational rhythm. The pace itself is a strength; the challenge is that fillers fill the space that pauses should occupy."
+      },
+      "rhetorical_variation": {
+        "score": 10,
+        "db": 55.5,
+        "notes": "A dynamic range of 55.5 dB is exceptional and indicates strong physical commitment to vocal expression throughout the sermon. This wide range gives the preacher significant tools for emphasis and emotional coloring."
+      },
+      "landing_space": {
+        "score": 7,
+        "count": 452,
+        "avg_duration_sec": 0.5,
+        "notes": "452 pauses across 42 minutes suggests frequent stopping, but at an average of 0.5 seconds they tend to be micro-pauses rather than meaning-making beats. Longer 2-3 second pauses after key theological declarations would dramatically increase retention."
+      },
+      "pitch_variety": {
+        "score": 10,
+        "notes": "A pitch CV of 0.348 is well above the threshold for high variety, reflecting an expressive, melodically engaging delivery. Listeners are unlikely to experience monotone fatigue with this preacher."
+      },
+      "cognitive_breathing_room": {
+        "score": 10,
+        "talk_pct": 80,
+        "notes": "An 80% talk ratio lands in the ideal band, suggesting the preacher allows a meaningful proportion of silence. The challenge is ensuring those silent moments are intentional and well-placed rather than incidental."
+      },
+      "rhetorical_arc": {
+        "score": 4,
+        "notes": "The energy arc is declining, meaning the sermon's highest engagement and delivery energy is front-loaded in illustrations rather than building toward the biblical and applicational climax. Restructuring to save peak vocal energy for the God and You sections would dramatically improve sermonic impact."
+      },
+      "verbal_clarity": {
+        "score": 8,
+        "notes": "Language is largely accessible, colloquial, and jargon-light \u2014 'cistern,' 'idolatry,' and 'worthlessness' are briefly explained. Occasional run-on thinking-out-loud sentences reduce clarity at key moments, but the overall register is well-suited to a general audience."
+      }
+    },
+    "gospel_check": {
+      "jesus_as_hero": false,
+      "heart_level_application": true,
+      "behavior_change_present": true,
+      "redemptive_history_noted": false,
+      "nonchristian_accessible": true,
+      "notes": "The sermon is a compelling diagnosis of idolatry with genuine pastoral warmth, but Jesus is effectively absent as the solution. The preacher argues persuasively for God as the superior alternative to idols but never explains how trust in God becomes possible through Christ's atoning work \u2014 listeners are called to 'rededicate' and 'reset' without a gospel engine to power that reorientation. For an expository sermon in Jeremiah, a brief connection to the new covenant (Jer. 31) or to Christ as the fulfillment of the living water image (John 4, 7) would have grounded the call in redemptive history.",
+      "G_score": 7,
+      "G_note": "God is portrayed as creator, sustainer, protector, provider, and the one who 'practices steadfast love, justice, and righteousness' \u2014 a richer-than-average portrait drawn directly from the text.",
+      "O_score": 8,
+      "O_note": "The human problem of self-sufficiency, misplaced trust, and existential agitation is named with unusual honesty and diagnostic specificity, resonating strongly with lived experience.",
+      "S_score": 7,
+      "S_note": "Sin as idolatry is named honestly and implicates the hearer without moralism \u2014 the preacher's self-disclosure about Netflix and self-soothing models the very confession he is calling for.",
+      "P_score": 8,
+      "P_note": "The cistern metaphor, the celebrity case studies, the baby-in-the-woods analogies, and the pacifier-to-self-soothing arc are all crafted illustrations that earn the right to be heard.",
+      "E_score": 2,
+      "E_note": "Jesus is never named in the sermon body; the cross and resurrection are entirely absent, leaving the gospel solution unaddressed and making the call to trust God motivationally thin.",
+      "L_score": 5,
+      "L_note": "The call to 'reset your true north to God' is sincere but vague \u2014 it lacks the specificity of what transformed living actually looks like in the seven idol categories named earlier.",
+      "gold_standard": "No",
+      "gold_standard_note": "With E=2, the gold standard threshold cannot be met regardless of other scores \u2014 the sermon's diagnostic power is not matched by a Christ-centered redemptive offer.",
+      "incomplete_flag": true
+    },
+    "rubric": {
+      "exegesis_theology": {
+        "context_set": 2,
+        "main_point_clear": 4,
+        "preached_jesus": 1,
+        "redemptive_history": 1
+      },
+      "application": {
+        "clear_helpful_application": 3,
+        "gospel_centered": 2,
+        "clear_response": 2,
+        "heart_care": 4,
+        "nonchristian_friendly": 4
+      },
+      "presentation": {
+        "engaging_intro": 3,
+        "clear_structure": 3,
+        "voice_inflection": 4
+      }
+    }
+  }
+}

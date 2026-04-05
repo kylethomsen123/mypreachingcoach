@@ -1,0 +1,227 @@
+{
+  "speaker": "Kyle Thomsen",
+  "source": "https://youtu.be/v8Ov-E8qiA4?si=GnFofIhnd-AIUgVh",
+  "acoustic": {
+    "duration_min": 42.3,
+    "word_count": 6880,
+    "estimated_wpm": 162.5,
+    "filler_count": 133,
+    "filler_per_minute": 3.14,
+    "top_fillers": [
+      [
+        "like",
+        54
+      ],
+      [
+        "so",
+        32
+      ],
+      [
+        "right",
+        26
+      ],
+      [
+        "you know",
+        10
+      ],
+      [
+        "actually",
+        5
+      ]
+    ],
+    "pause_count": 429,
+    "dynamic_range_db": 53.5,
+    "talk_ratio": 0.8,
+    "pitch_cv": 0.33,
+    "arc_pattern": "declining",
+    "arc_thirds": {
+      "start": 0.022,
+      "middle": 0.0189,
+      "end": 0.0173
+    },
+    "wpm_score": 10,
+    "filler_score": 4,
+    "dynamic_range_score": 10,
+    "pause_score": 5,
+    "vocal_variety_score": 10,
+    "talk_silence_score": 10,
+    "energy_arc_score": 4
+  },
+  "analysis": {
+    "sermon_title": "Walk the Walk: Justice, Kindness, and Humility",
+    "passage": "Micah 6:1-8",
+    "bottom_line": "Justice and kindness are the fruit, but walking humbly with God is the root.",
+    "central_idea": "A broken world needs both justice and kindness, and the only way to embody both is to walk humbly with God, whose own character is the source of each.",
+    "sticky_statement": "The bottom line is genuinely memorable and portable \u2014 'justice and kindness are the fruit, humility is the root' is a clean, repeatable metaphor that listeners will carry out the door.",
+    "encouragement": "Kyle demonstrates strong contextual storytelling and a warm, accessible teaching voice that makes ancient Near Eastern concepts feel immediate and personal. His exegesis of Micah 6:1-8 is thorough and well-sequenced \u2014 he earns the text before landing the application. The consistent use of Hebrew vocabulary (shalom, tzedakah, mishpat, chesed) is handled with humor and repetition that invites rather than alienates, which is a real skill.",
+    "growth_edges": [
+      "Filler word frequency (3.14/min, 133 total) is distracting and undermines credibility at key moments \u2014 targeted practice with recorded pauses replacing 'um/uh/like' would sharpen delivery significantly.",
+      "The energy arc is declining across the sermon, meaning the emotional and rhetorical intensity peaks early and fades; the GOD section and closing application need more intentional climactic build so the sermon lands with greater weight.",
+      "The three-part application (listen more, adjust pace, suffer with others) is underdeveloped relative to the rich exegetical groundwork \u2014 each point deserves a concrete, sticky story or example rather than brief description, especially for an expository sermon that has spent significant time in the text."
+    ],
+    "structure": {
+      "overall_score": 74,
+      "sections": [
+        {
+          "label": "ME",
+          "title": "Personal Hook",
+          "summary": "Kyle opens by naming the universal feeling that the world is broken, positioning himself as someone wrestling with the same tension between justice and kindness.",
+          "start_quote": "In a world full of disagreements, division and destruction, in a world",
+          "word_count": 380,
+          "estimated_minutes": 2.3,
+          "score": 78,
+          "strength": "The opening diagnoses a real felt tension (justice vs. kindness) that most listeners will immediately recognize in themselves.",
+          "growth": "The ME section is more WE than ME \u2014 a brief personal anecdote of a moment where Kyle personally failed at one of these would have grounded the tension in lived experience before widening to the world."
+        },
+        {
+          "label": "WE",
+          "title": "Universal Bridge",
+          "summary": "Kyle broadens the personal tension into a communal one, arguing that the world needs both justice and kindness and that neither alone is sufficient.",
+          "start_quote": "I think we need a world that has both more kindness and more justice",
+          "word_count": 320,
+          "estimated_minutes": 2.0,
+          "score": 72,
+          "strength": "Clearly names the two poles (kindness without justice = passive; justice without kindness = harsh) and invites self-examination without being accusatory.",
+          "growth": "The WE section resolves too quickly into the solution before the problem has been felt long enough \u2014 sitting in the cost of the divide for another 60 seconds would increase emotional stakes."
+        },
+        {
+          "label": "GOD",
+          "title": "Biblical Text",
+          "summary": "Kyle walks through Micah 6:1-8, explaining the covenant lawsuit structure, God's recitation of faithfulness, Israel's misguided religious response, and Micah's three-part summary of what God actually requires.",
+          "start_quote": "Micah chapter six, his argument is coming to a climax. The argument",
+          "word_count": 2850,
+          "estimated_minutes": 17.5,
+          "score": 81,
+          "strength": "The exegesis is genuinely expository \u2014 Kyle follows the text's own argument sequentially, explains rhetorical devices (cosmic lawsuit, ancient Near Eastern witness), and unpacks the Hebrew terms with accuracy and accessibility.",
+          "growth": "The definitions of justice (mishpat), righteousness (tzedakah), and covenant love (chesed) are rich but introduced in rapid succession near the end of this section, which may cause cognitive overload; spacing them with a brief application beat for each would aid retention."
+        },
+        {
+          "label": "YOU",
+          "title": "Application",
+          "summary": "Kyle presents three practices of walking humbly with God \u2014 listening more and talking less, adjusting to God's pace, and suffering with those who hurt \u2014 using a Hawaii hike as the anchor illustration.",
+          "start_quote": "Walking with God is listening more and talking less. Listening is a posture",
+          "word_count": 1050,
+          "estimated_minutes": 6.5,
+          "score": 65,
+          "strength": "The Napali Coast hike is a vivid, earned illustration that makes 'walking humbly' feel embodied rather than abstract, and the three-part framework is clear and memorable.",
+          "growth": "Each of the three application points is stated but not sufficiently illustrated with a second story or concrete scenario \u2014 especially the third point (suffering with others), which is the most challenging and most important but receives the least development."
+        },
+        {
+          "label": "WE2",
+          "title": "Vision / Sendoff",
+          "summary": "Kyle closes by pointing to Jesus as the only one who perfectly embodied justice and kindness, rooted in humility before the Father, and calls the congregation to be that same embodiment in the world.",
+          "start_quote": "There's only one who has lived this perfectly and that is Jesus Christ",
+          "word_count": 620,
+          "estimated_minutes": 3.8,
+          "score": 76,
+          "strength": "Jesus is explicitly brought in as the hero and model, with concrete examples (flipping tables, calling the woman 'precious daughter,' inviting Judas to dinner) that make the vision compelling and cross-centered.",
+          "growth": "The closing prayer, while liturgically rich, is quite long and slightly dilutes the emotional peak established by the Jesus examples \u2014 a shorter, more piercing benediction would send people out with greater momentum."
+        }
+      ],
+      "flags": [
+        {
+          "severity": "warning",
+          "text": "Energy arc is declining \u2014 the most theologically dense and emotionally resonant material (chesed illustration, Jesus as hero) arrives late but is delivered at lower energy than the opening, reducing impact."
+        },
+        {
+          "severity": "warning",
+          "text": "Three Hebrew vocabulary terms (tzedakah, mishpat, chesed) plus shalom are all introduced within roughly 8 minutes, which may exceed working memory capacity for unchurched listeners."
+        },
+        {
+          "severity": "info",
+          "text": "The sermon is the first of a three-week series, which limits full application development \u2014 this structural constraint is handled well but should be named explicitly to listeners so they know the 'how' is coming."
+        }
+      ]
+    },
+    "vocal": {
+      "filler_words": {
+        "count": 133,
+        "per_minute": 3.14,
+        "examples": [
+          "you know",
+          "like",
+          "um"
+        ],
+        "score": 4,
+        "notes": "At 3.14 fillers per minute, filler words are frequent enough to undercut authority at key theological moments. The most effective fix is deliberate pause-replacement: train to stop rather than fill, especially before landing key phrases like 'chesed' or 'walking humbly with God.'"
+      },
+      "pace": {
+        "avg_wpm": 162.5,
+        "assessment": "ideal",
+        "score": 10,
+        "notes": "162.5 WPM sits comfortably in the ideal range and pairs well with Kyle's conversational style. The pace allows complex ideas to land without feeling rushed, though intentional slow-down at theological anchor points (Micah 6:8, chesed definition) would increase weight."
+      },
+      "rhetorical_variation": {
+        "score": 10,
+        "db": 53.5,
+        "notes": "A dynamic range of 53.5 dB is exceptional and indicates meaningful volume variation throughout the sermon. This is a genuine vocal strength \u2014 the contrast between intimate storytelling moments and emphatic proclamation creates natural emphasis and emotional texture."
+      },
+      "landing_space": {
+        "score": 7,
+        "count": 429,
+        "avg_duration_sec": 0.5,
+        "notes": "429 pauses across 42 minutes yields roughly 10 per minute, which is above the ideal 2-6/min range, suggesting many pauses are brief micro-stops rather than weighted rhetorical pauses. Consolidating pauses into fewer, longer, more intentional beats \u2014 especially after major statements \u2014 would increase gravitas."
+      },
+      "pitch_variety": {
+        "score": 10,
+        "notes": "A pitch CV of 0.330 is excellent and reflects a naturally expressive speaker whose vocal range communicates engagement and energy. This is one of Kyle's clearest delivery assets and should be maintained, especially as energy arc work is done."
+      },
+      "cognitive_breathing_room": {
+        "score": 10,
+        "talk_pct": 80,
+        "notes": "An 80% talk ratio falls within the ideal 78-92% window, indicating Kyle leaves appropriate silence for listener processing. This balance is healthy and should be maintained as filler word reduction work is done, since the silence will naturally increase."
+      },
+      "rhetorical_arc": {
+        "score": 4,
+        "notes": "The energy arc is declining, meaning the sermon's highest vocal energy is front-loaded in the introduction and the most important content \u2014 the chesed illustration, the Jesus climax, the closing call \u2014 arrives at lower energy. Intentional escalation in the final 10 minutes would transform the landing."
+      },
+      "verbal_clarity": {
+        "score": 8,
+        "notes": "Kyle's language is largely conversational, accessible, and jargon-light \u2014 he explains every Hebrew term he introduces and uses humor to ease complexity. Occasional run-on structures and self-interrupting sentences (especially mid-illustration) reduce clarity slightly, but the overall register is well-suited to a general audience."
+      }
+    },
+    "gospel_check": {
+      "jesus_as_hero": true,
+      "heart_level_application": true,
+      "behavior_change_present": true,
+      "redemptive_history_noted": true,
+      "nonchristian_accessible": true,
+      "notes": "The gospel is present and meaningfully developed \u2014 Kyle connects the firstborn sacrifice passage to Jesus as the true and better sacrifice, names Jesus as the only one who perfectly embodied justice and kindness, and grounds application in grace rather than law. The cross is explicit and not merely assumed, though it arrives late in the sermon and could be woven more intentionally into the earlier exegetical sections to give it greater structural weight.",
+      "G_score": 8,
+      "G_note": "God is portrayed with specificity \u2014 as covenant-keeper, rescuer, servant of the vulnerable, and initiator of relationship \u2014 going well beyond 'God loves you' to depict Yahweh's character in the covenant lawsuit framework.",
+      "O_score": 8,
+      "O_note": "The human problem is named at multiple levels \u2014 personal moral failure, communal injustice, religious self-sufficiency, and the deep disorientation of Israel who doesn't even know what God wants \u2014 and it resonates with contemporary life.",
+      "S_score": 7,
+      "S_note": "Sin is named honestly as covenant-breaking, moral confusion, and self-obsession (both paralysis and pride), and Kyle implicates the hearer directly through the 'which one are you' framing without sliding into moralism.",
+      "P_score": 8,
+      "P_note": "The COVID pastoral phone call illustration (pray for my imagination) and the Napali Coast hike are both earned, emotionally resonant, and theologically loaded stories that create genuine permission to be heard.",
+      "E_score": 8,
+      "E_note": "Jesus is explicitly named as the only one who perfectly embodied justice and kindness, the cross is named as payment for unrighteousness, and specific Gospel scenes (Judas dinner, healing of the woman) make Jesus the concrete hero of the sermon.",
+      "L_score": 7,
+      "L_note": "The three-part call (listen more, adjust pace, suffer with others) is grace-motivated and flows from walking with God rather than self-improvement, though more concrete specificity in each point would strengthen the lordship call.",
+      "gold_standard": "Partially",
+      "gold_standard_note": "E scores 8 and four other scores reach 7 or above, meeting the threshold for 'Yes,' but the Jesus material arrives late and is not architecturally central to the expository structure, keeping this just short of a full gold standard designation.",
+      "incomplete_flag": false
+    },
+    "rubric": {
+      "exegesis_theology": {
+        "context_set": 5,
+        "main_point_clear": 4,
+        "preached_jesus": 4,
+        "redemptive_history": 5
+      },
+      "application": {
+        "clear_helpful_application": 3,
+        "gospel_centered": 4,
+        "clear_response": 3,
+        "heart_care": 4,
+        "nonchristian_friendly": 4
+      },
+      "presentation": {
+        "engaging_intro": 4,
+        "clear_structure": 4,
+        "voice_inflection": 4
+      }
+    }
+  }
+}

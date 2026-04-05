@@ -1,0 +1,31 @@
+class SermonPDF(FPDF):
+    M  = 15.0          # left / right margin
+    CW = 185.9         # usable content width (215.9 - 30)
+    RH = 6.0           # standard row height
+
+    def __init__(self):
+        super().__init__(orientation="P", unit="mm", format="Letter")
+        self._mono = None
+        fpath = _find_mono_font()
+        if fpath:
+            try:
+65:    subprocess.run([ytdlp,"-x","--audio-format","mp3",
+78:            r = client.audio.transcriptions.create(model="whisper-1",file=f,response_format="text")
+95:            r = client.audio.transcriptions.create(model="whisper-1",file=f,response_format="text")
+371:    prompt = CLAUDE_PROMPT.format(
+451:    M  = 15.0          # left / right margin
+452:    CW = 185.9         # usable content width (215.9 - 30)
+456:        super().__init__(orientation="P", unit="mm", format="Letter")
+465:        self.set_auto_page_break(auto=True, margin=18)
+466:        self.set_margins(self.M, self.M, self.M)
+481:            cell_w = self.CW
+499:        self.rect(self.M, self.M, self.CW, 8, "F")
+503:        self.cell(self.CW / 2, 7, "My Preaching Coach")
+504:        self.cell(self.CW / 2, 7, safe(right), align="R")
+509:        self.line(self.M, ry, self.M + self.CW, ry)
+518:        self.line(self.M, y, self.M + self.CW, y)
+529:        self.cell(self.CW, 7, "  " + safe(title), fill=True,
+537:        self.cell(self.CW, 6, safe(label), fill=True,
+541:        self.multi_cell(self.CW, 6, safe(text))
+572:        self.multi_cell(self.CW, 10, safe(ev.get("sermon_title", "Untitled Sermon")), align="C")
+580:        self.multi_cell(self.CW, 6, safe(meta), align="C")

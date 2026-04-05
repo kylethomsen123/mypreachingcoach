@@ -1,0 +1,227 @@
+{
+  "speaker": "Gil A",
+  "source": "https://youtu.be/X1Z5DJG5cjg",
+  "acoustic": {
+    "duration_min": 43.0,
+    "word_count": 6034,
+    "estimated_wpm": 140.3,
+    "filler_count": 129,
+    "filler_per_minute": 3.0,
+    "top_fillers": [
+      [
+        "like",
+        40
+      ],
+      [
+        "so",
+        38
+      ],
+      [
+        "right",
+        22
+      ],
+      [
+        "you know",
+        12
+      ],
+      [
+        "okay",
+        8
+      ]
+    ],
+    "pause_count": 375,
+    "dynamic_range_db": 70.1,
+    "talk_ratio": 0.8,
+    "pitch_cv": 0.328,
+    "arc_pattern": "declining",
+    "arc_thirds": {
+      "start": 0.1285,
+      "middle": 0.1231,
+      "end": 0.1176
+    },
+    "wpm_score": 10,
+    "filler_score": 4,
+    "dynamic_range_score": 10,
+    "pause_score": 7,
+    "vocal_variety_score": 10,
+    "talk_silence_score": 10,
+    "energy_arc_score": 4
+  },
+  "analysis": {
+    "sermon_title": "Not the King as We Expected: A Crown, a Cross, and a Donkey",
+    "passage": "Zechariah 9:9; Philippians 2:6-8; Matthew 21:1-11",
+    "bottom_line": "The King came low so no one would be out of reach.",
+    "central_idea": "Jesus entered Jerusalem not as the conquering political king the crowd expected, but as a humble savior riding a donkey, revealing that God's kingdom advances through humility, surrender, and sacrifice rather than worldly power.",
+    "sticky_statement": "The bottom line is vivid and portable, though it competes with several other strong phrases scattered throughout the sermon that dilute its singular stickiness.",
+    "encouragement": "Gil demonstrates a rare and compelling authenticity \u2014 he preaches from lived experience (juvenile hall ministry, personal gut checks) that earns him the right to be heard and creates genuine emotional connection with the audience. His ability to weave cultural humor, street-level language, and theological depth together keeps the message accessible and warm without sacrificing substance. He also models the very humility he preaches, consistently deflecting glory and pointing listeners toward Jesus rather than himself.",
+    "growth_edges": [
+      "Expository depth needs strengthening: while Zechariah 9:9 and Philippians 2:6-8 are quoted, they appear late and briefly rather than driving the sermon's structure \u2014 a more disciplined verse-by-verse engagement with the Palm Sunday text (Matthew 21 or a parallel) would anchor the message more firmly in Scripture and satisfy the expository sermon type.",
+      "Filler word frequency (3.0/min, 129 total) and rapid-fire delivery create moments where key theological statements get buried \u2014 slowing down after power phrases like 'the King came low so no one would be out of reach' and allowing silence to do the work would dramatically increase retention and emotional impact.",
+      "The sermon's energy arc is declining, and the closing invitation \u2014 while heartfelt \u2014 becomes somewhat repetitive and loses momentum; tightening the final 8-10 minutes by consolidating the three-response options into a cleaner, more focused altar moment would preserve the emotional high point and send listeners out with greater clarity and urgency."
+    ],
+    "structure": {
+      "overall_score": 6,
+      "sections": [
+        {
+          "label": "ME",
+          "title": "Personal Hook",
+          "summary": "Gil introduces the Palm Sunday tension through personal humor, cultural self-awareness, and the story of a young man in juvenile hall who is angry at God for not showing up as expected.",
+          "start_quote": "Today's message is titled not the king as we expected a crown",
+          "word_count": 780,
+          "estimated_minutes": 5.6,
+          "score": 7,
+          "strength": "The juvenile hall story is emotionally resonant and immediately establishes the sermon's central tension in a concrete, relatable human experience.",
+          "growth": "The opening meanders through greetings and comedy for several minutes before landing on a clear hook, delaying audience engagement with the actual message."
+        },
+        {
+          "label": "WE",
+          "title": "Universal Bridge",
+          "summary": "Gil broadens the tension to the universal human tendency to want God to move in powerful, impressive, comfortable ways rather than humble, quiet, unexpected ones.",
+          "start_quote": "We want God to move in obvious ways, big ways, powerful ways",
+          "word_count": 620,
+          "estimated_minutes": 4.4,
+          "score": 7,
+          "strength": "The contrast between 'power without humility' and 'victory without surrender' names a deeply shared human longing with precision and honesty.",
+          "growth": "The section loops back on itself several times without clearly transitioning into the biblical text, blurring the boundary between WE and GOD sections."
+        },
+        {
+          "label": "GOD",
+          "title": "Biblical Text",
+          "summary": "Gil works through the Palm Sunday narrative \u2014 Jesus entering Jerusalem on a donkey, the crowd's Hosanna cry, and the prophetic fulfillment of Zechariah 9:9 and Philippians 2:6-8 \u2014 to show that Jesus came to defeat sin, not Rome.",
+          "start_quote": "Palm Sunday is the moment Jesus enters Jerusalem publicly. This isn't random",
+          "word_count": 950,
+          "estimated_minutes": 6.8,
+          "score": 5,
+          "strength": "The unpacking of 'Hosanna' as a Hebrew plea for salvation is a genuinely illuminating exegetical moment that rewards attentive listeners.",
+          "growth": "The biblical texts are quoted but not worked through in any sustained way \u2014 the preacher moves quickly from text to illustration rather than letting the passage's own logic drive the sermon, which is the core expectation of expository preaching."
+        },
+        {
+          "label": "YOU",
+          "title": "Application",
+          "summary": "Gil challenges listeners to be 'the donkey' \u2014 available, willing, and responsive \u2014 carrying the presence of Jesus into overlooked places rather than waiting for a platform or feeling ready.",
+          "start_quote": "Are you willing to live low so Jesus can be lifted high?",
+          "word_count": 880,
+          "estimated_minutes": 6.3,
+          "score": 7,
+          "strength": "The donkey-as-metaphor-for-availability is creative, memorable, and theologically grounded, giving listeners a concrete image to carry out of the room.",
+          "growth": "The application section generates multiple strong calls-to-action but never settles on one clear behavioral step, leaving some listeners uncertain about what specifically to do differently this week."
+        },
+        {
+          "label": "WE2",
+          "title": "Vision / Sendoff",
+          "summary": "Gil closes with a reflection on the same crowd who shouted Hosanna later crying 'crucify him,' issues a challenge to follow Jesus down the low road, and invites three levels of response \u2014 hand raised, hand on heart, or physical step forward.",
+          "start_quote": "It's easy to praise a king when he's doing what you want",
+          "word_count": 720,
+          "estimated_minutes": 5.1,
+          "score": 6,
+          "strength": "The Hosanna-to-crucify-him reversal is a powerful and honest moment of communal self-examination that elevates the closing above a standard altar call.",
+          "growth": "The three-response invitation becomes repetitive and loses energy \u2014 tightening this section to one clear response with a single, well-crafted prayer would preserve the emotional momentum built throughout the sermon."
+        }
+      ],
+      "flags": [
+        {
+          "severity": "warning",
+          "text": "Expository structure is weak: the Palm Sunday passage (Matthew 21 or parallel) is never formally read or worked through verse-by-verse; Scripture references appear as supporting quotes rather than as the driving framework of the sermon."
+        },
+        {
+          "severity": "warning",
+          "text": "Energy arc is declining: the sermon peaks emotionally in the middle sections and loses momentum during the extended closing invitation, which risks undermining the decision moment."
+        },
+        {
+          "severity": "info",
+          "text": "Multiple 'bottom line' statements compete throughout the sermon ('He didn't flex, He fulfilled'; 'The King came low so no one would be out of reach'; 'We don't carry His power, we carry His presence') \u2014 consolidating to one primary sticky phrase would improve retention."
+        }
+      ]
+    },
+    "vocal": {
+      "filler_words": {
+        "count": 129,
+        "per_minute": 3.0,
+        "examples": [
+          "yo",
+          "like",
+          "all right"
+        ],
+        "score": 4,
+        "notes": "At 3.0 fillers per minute, the frequency is high enough to create noise around key theological statements \u2014 particularly 'yo,' which appears so often it loses its intended conversational energy. Targeted practice with intentional pausing instead of filler insertion would sharpen the delivery significantly."
+      },
+      "pace": {
+        "avg_wpm": 140.3,
+        "assessment": "ideal",
+        "score": 10,
+        "notes": "140 WPM sits comfortably in the ideal conversational-preaching range and matches Gil's energetic, relational style well. The pace feels natural rather than rushed for this speaker's personality."
+      },
+      "rhetorical_variation": {
+        "score": 10,
+        "db": 70.1,
+        "notes": "A 70.1 dB dynamic range is exceptional and reflects genuine emotional investment \u2014 Gil moves fluidly between intimate storytelling register and prophetic declaration, which keeps listeners physiologically engaged throughout. This is one of his strongest vocal assets."
+      },
+      "landing_space": {
+        "score": 7,
+        "count": 375,
+        "avg_duration_sec": 0.5,
+        "notes": "375 pauses across 43 minutes shows good instinct for creating breathing room, but many pauses appear to be brief transitional hesitations rather than intentional post-punch silences \u2014 lengthening pauses after key statements like 'the King came low so no one would be out of reach' would dramatically increase their impact."
+      },
+      "pitch_variety": {
+        "score": 10,
+        "notes": "A pitch CV of 0.328 is excellent and well above the threshold for expressive, engaging delivery \u2014 Gil's natural conversational musicality keeps the sermon from becoming monotonous even at length. This is a clear strength to be maintained and built upon."
+      },
+      "cognitive_breathing_room": {
+        "score": 10,
+        "talk_pct": 80,
+        "notes": "An 80% talk ratio falls squarely in the ideal range, suggesting Gil is not steamrolling his audience but leaving appropriate space for reflection. This balances well with his high energy delivery style."
+      },
+      "rhetorical_arc": {
+        "score": 4,
+        "notes": "The energy arc is declining, meaning the sermon's most intense moments come in the middle sections and the closing invitation feels comparatively flat \u2014 a preacher of Gil's vocal gifts should be building toward a crescendo at the altar call, not winding down. Restructuring the final 8 minutes to build rather than repeat would resolve this."
+      },
+      "verbal_clarity": {
+        "score": 7,
+        "notes": "Gil's language is refreshingly accessible, culturally specific, and largely jargon-free, which makes the gospel genuinely available to unchurched listeners. Occasional rapid-fire strings of parallel clauses ('even when you lose loved ones, even when storms come, even when there's no money') pile up faster than they can be processed \u2014 strategic slowing would increase clarity without sacrificing authenticity."
+      }
+    },
+    "gospel_check": {
+      "jesus_as_hero": true,
+      "heart_level_application": true,
+      "behavior_change_present": true,
+      "redemptive_history_noted": true,
+      "nonchristian_accessible": true,
+      "notes": "Gil keeps Jesus genuinely central throughout \u2014 the cross is not assumed but explicitly stated as the destination of the Palm Sunday journey, and the substitutionary logic ('I'm hanging on that for you because I don't want you there') is named clearly. The sermon is notably accessible to skeptics and unchurched listeners through its cultural language, humor, and avoidance of insider jargon. The primary gospel gap is a somewhat thin treatment of sin as the specific human problem Jesus came to solve \u2014 the obstacle is named as 'missing God' and 'wrong expectations' more than as moral rebellion requiring atonement.",
+      "G_score": 7,
+      "G_note": "God's humility, intentionality, and sacrificial love are portrayed with specificity \u2014 particularly the image of an almighty God choosing a donkey \u2014 though his holiness and justice as reasons the cross was necessary receive less development.",
+      "O_score": 7,
+      "O_note": "The human problem is felt and named through compelling illustrations (the angry juvenile hall youth, the neighbor analogy, the Hosanna-to-crucify reversal) though the deeper problem of sin as rebellion against a holy God is stated briefly rather than developed fully.",
+      "S_score": 6,
+      "S_note": "Sin is implicated honestly through second-person challenges ('you want the blessing without the obedience,' 'you might be too good for the donkey') but tends toward the motivational rather than the morally serious, stopping short of naming specific sins that require the cross.",
+      "P_score": 8,
+      "P_note": "The juvenile hall story, the donkey-as-availability metaphor, and the Hosanna-to-crucify reversal are all excellent illustrative moments that earn the right to be heard and reward attentive listeners.",
+      "E_score": 8,
+      "E_note": "Jesus is unmistakably the hero \u2014 his humility, sacrifice, and substitutionary death on the cross are stated explicitly and return repeatedly throughout the sermon as the interpretive key for everything else.",
+      "L_score": 7,
+      "L_note": "The call to 'be the donkey' \u2014 available, willing, going where led \u2014 is a grace-motivated and concrete image for transformed living, though the specific behavioral steps remain somewhat general rather than highly actionable.",
+      "gold_standard": "Partially",
+      "gold_standard_note": "E scores 8 and four other scores reach 7+, meeting the technical threshold for 'Yes,' but the incomplete treatment of sin's gravity and the substitutionary logic of the atonement keep this from full gold-standard status.",
+      "incomplete_flag": false
+    },
+    "rubric": {
+      "exegesis_theology": {
+        "context_set": 3,
+        "main_point_clear": 4,
+        "preached_jesus": 4,
+        "redemptive_history": 3
+      },
+      "application": {
+        "clear_helpful_application": 3,
+        "gospel_centered": 4,
+        "clear_response": 3,
+        "heart_care": 5,
+        "nonchristian_friendly": 5
+      },
+      "presentation": {
+        "engaging_intro": 3,
+        "clear_structure": 3,
+        "voice_inflection": 5
+      }
+    }
+  }
+}

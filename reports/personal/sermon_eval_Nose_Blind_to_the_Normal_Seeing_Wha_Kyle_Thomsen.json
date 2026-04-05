@@ -1,0 +1,231 @@
+{
+  "speaker": "Kyle Thomsen",
+  "source": "You're Missing It   Kyle Thomsen.m4a",
+  "acoustic": {
+    "duration_min": 32.9,
+    "word_count": 5787,
+    "estimated_wpm": 176.1,
+    "filler_count": 136,
+    "filler_per_minute": 4.14,
+    "top_fillers": [
+      [
+        "like",
+        67
+      ],
+      [
+        "so",
+        37
+      ],
+      [
+        "right",
+        11
+      ],
+      [
+        "you know",
+        7
+      ],
+      [
+        "actually",
+        7
+      ]
+    ],
+    "pause_count": 310,
+    "dynamic_range_db": 62.5,
+    "talk_ratio": 0.8,
+    "pitch_cv": 0.324,
+    "arc_pattern": "declining",
+    "arc_thirds": {
+      "start": 0.0209,
+      "middle": 0.0175,
+      "end": 0.0153
+    },
+    "wpm_score": 8,
+    "filler_score": 2,
+    "dynamic_range_score": 10,
+    "pause_score": 5,
+    "vocal_variety_score": 10,
+    "talk_silence_score": 10,
+    "energy_arc_score": 4
+  },
+  "analysis": {
+    "sermon_title": "Nose Blind to the Normal: Seeing What God Is Doing",
+    "passage": "Acts 3:1-10",
+    "bottom_line": "Stop, see someone, and ask the question that makes you uncomfortable: Can I pray for you?",
+    "central_idea": "Familiarity blinds us to the people God has placed around us, but when we stop and truly see them as Jesus did, we create space for God to do what only God can do.",
+    "sticky_statement": "The phrase 'nose blind to the normal' is creative and memorable, but the most portable and actionable takeaway \u2014 'Can I pray for you?' \u2014 is simpler, more repeatable, and better anchors the sermon's call to action.",
+    "encouragement": "Kyle is a gifted communicator with a warm, conversational presence that makes biblical truth feel accessible and personal. His extended 'nose blind' illustration is original, layered, and does real theological work \u2014 connecting neuroscience and everyday experience to the spiritual condition of familiarity blindness. His pastoral heart is evident throughout, especially in the opening prayer over current events, which models how a shepherd holds tension between lament and trust.",
+    "growth_edges": [
+      "Filler word frequency (4.14/min) significantly clutters the delivery and erodes authority at key moments \u2014 targeted pause practice and recording self-review would help Kyle replace verbal fillers with intentional silence, especially before and after major statements.",
+      "The expository spine is present but underdeveloped: the passage is read and summarized rather than worked through verse-by-verse, and exegetical details (e.g., the significance of the 3 PM prayer hour, the name 'Beautiful Gate,' Peter's command to 'look at us') are touched but not deeply mined \u2014 slower time in the text with stronger authorial-intent statements would elevate the sermon's expository credibility.",
+      "The energy arc is declining, and the sermon's climax (the 'Can I pray for you?' practice moment) arrives well before the closing prayer, leaving the landing underpowered \u2014 restructuring the YOU/WE2 sections so that the most emotionally resonant vision statement comes last would create a stronger, more memorable sendoff."
+    ],
+    "structure": {
+      "overall_score": 3,
+      "sections": [
+        {
+          "label": "ME",
+          "title": "Personal Hook",
+          "summary": "Kyle opens with the current geopolitical tension, a prayer over Iran, and then transitions to a college roommate story about smell-blindness as an illustration of familiarity blindness.",
+          "start_quote": "Good morning, friends. My name's Kyle, and I'm thrilled",
+          "word_count": 1100,
+          "estimated_minutes": 6.2,
+          "score": 4,
+          "strength": "The roommate/smell story is original, self-deprecating, and genuinely funny \u2014 it earns the room's trust and sets up the sermon's core metaphor effectively.",
+          "growth": "The opening runs long before the biblical anchor arrives, and the transition from the geopolitical prayer to the college illustration feels abrupt and tonally inconsistent \u2014 a tighter bridge would help."
+        },
+        {
+          "label": "WE",
+          "title": "Universal Bridge",
+          "summary": "Kyle uses the Troxler effect and everyday examples (siblings' growth, furniture arrangement, people we overlook) to broaden familiarity blindness into a universal human condition, landing on the question: could we be blind to God at work?",
+          "start_quote": "In 1804, a Swiss physician created what's known as the Troxler effect",
+          "word_count": 600,
+          "estimated_minutes": 3.4,
+          "score": 4,
+          "strength": "The Troxler effect is a surprising and credible illustration that gives intellectual texture to a felt experience, and the pivot to 'what if we're blind to God at work' is a strong theological bridge.",
+          "growth": "The WE section could more explicitly name the spiritual stakes \u2014 the blindness to people is touching, but naming it as a symptom of self-absorption or sin would deepen the resonance before the text."
+        },
+        {
+          "label": "GOD",
+          "title": "Biblical Text",
+          "summary": "Kyle works through Acts 3:1-10, using a Starbucks drive-through analogy to contemporize Peter and John's routine, unpacking the Beautiful Gate's significance, and celebrating the lame man's healing as a model of Spirit-empowered seeing and action.",
+          "start_quote": "One day, Peter and John were going to the temple at the time",
+          "word_count": 1800,
+          "estimated_minutes": 10.2,
+          "score": 3,
+          "strength": "The contemporizing Starbucks analogy is vivid and makes the passage feel immediate, and Kyle correctly highlights the double mention of the gate as a literary/theological signal.",
+          "growth": "The exegesis stays at the surface level \u2014 the Greek word 'atenizo' is mentioned but not deeply explored, the three o'clock prayer hour is noted but its Jewish liturgical significance is undersold, and the passage's placement in the larger Acts narrative (Spirit-empowered witness expanding outward) is only briefly touched rather than driven home as the expository anchor."
+        },
+        {
+          "label": "YOU",
+          "title": "Application",
+          "summary": "Kyle issues a direct challenge to ask 'Can I pray for you?' to someone who makes you uncomfortable this week, practices it in the room, and adds a bonus challenge of 'Will you pray for me?' as a posture of humility.",
+          "start_quote": "What I want to do is I want to give you this one challenge",
+          "word_count": 900,
+          "estimated_minutes": 5.1,
+          "score": 4,
+          "strength": "The in-service practice of saying 'Can I pray for you?' is bold and effective \u2014 it creates embodied commitment and a memorable moment that extends the sermon beyond Sunday.",
+          "growth": "The application could be more tightly tethered to the text's specific dynamic (the Spirit-enabled seeing, not just the asking) \u2014 as written, it risks feeling like a social skill challenge rather than a Spirit-dependence invitation."
+        },
+        {
+          "label": "WE2",
+          "title": "Vision / Sendoff",
+          "summary": "Kyle casts vision for a church that is awestruck not just by private miracles but by God breaking down gates and reaching those far from Him, framing the series conclusion as a call to outward-facing, Spirit-dependent community.",
+          "start_quote": "I want to be a church that's awestruck, not just because of what God",
+          "word_count": 400,
+          "estimated_minutes": 2.3,
+          "score": 3,
+          "strength": "The 'training wheels' metaphor \u2014 God showing up for you prepares you to help others \u2014 is theologically rich and connects private faith experience to communal mission effectively.",
+          "growth": "The sendoff arrives after the emotional peak of the practice exercise and feels like a cool-down rather than a crescendo \u2014 moving this vision language to the final minutes would dramatically strengthen the sermon's landing."
+        }
+      ],
+      "flags": [
+        {
+          "severity": "warning",
+          "text": "Expository depth is thin: the passage is narrated and illustrated more than exegeted \u2014 authorial intent, original language, and redemptive-historical placement need more explicit development for a sermon labeled expository."
+        },
+        {
+          "severity": "warning",
+          "text": "Energy arc is declining: the emotional and structural climax occurs mid-sermon during the prayer practice exercise, leaving the closing vision section feeling like a denouement rather than a sendoff."
+        },
+        {
+          "severity": "warning",
+          "text": "Filler word rate of 4.14/min is high and disrupts perceived authority and clarity, particularly during key theological and applicational transitions."
+        },
+        {
+          "severity": "info",
+          "text": "The opening geopolitical prayer, while pastorally appropriate, creates a tonal discontinuity that takes several minutes to resolve \u2014 consider a tighter bridge or integrating current events more directly into the sermon's thematic argument."
+        }
+      ]
+    },
+    "vocal": {
+      "filler_words": {
+        "count": 136,
+        "per_minute": 4.14,
+        "examples": [
+          "you know",
+          "like",
+          "I don't know"
+        ],
+        "score": 2,
+        "notes": "At 4.14 fillers per minute, verbal clutter is a significant barrier to perceived authority and clarity \u2014 Kyle's conversational warmth is a genuine strength, but replacing habitual fillers with intentional pauses would sharpen impact at key moments without losing his natural relational tone."
+      },
+      "pace": {
+        "avg_wpm": 176.1,
+        "assessment": "fast",
+        "score": 6,
+        "notes": "176 WPM is slightly above the ideal conversational preaching range (130\u2013165 WPM) and, combined with high filler density, reduces the listener's cognitive processing space \u2014 deliberate slow-downs at key theological statements would increase retention and perceived weight."
+      },
+      "rhetorical_variation": {
+        "score": 10,
+        "db": 62.5,
+        "notes": "A dynamic range of 62.5 dB is exceptional and indicates Kyle is using his full vocal instrument \u2014 he moves fluidly between intimate storytelling volume and declarative proclamation, which keeps listeners engaged and emotionally tracking with the content."
+      },
+      "landing_space": {
+        "score": 7,
+        "count": 310,
+        "avg_duration_sec": 0.5,
+        "notes": "310 pauses across 32.9 minutes averages roughly 9.4 per minute, which is above the ideal 2\u20136/min range and suggests many pauses are brief micro-hesitations rather than intentional rhetorical landing spaces \u2014 cultivating fewer, longer, more strategic pauses would increase gravitas."
+      },
+      "pitch_variety": {
+        "score": 10,
+        "notes": "A pitch CV of 0.324 is excellent and well above the threshold for expressive variety \u2014 Kyle's pitch range reflects genuine emotional engagement with his material and contributes significantly to listener interest and energy."
+      },
+      "cognitive_breathing_room": {
+        "score": 7,
+        "talk_pct": 80,
+        "notes": "An 80% talk ratio falls within the healthy range and suggests adequate silence is present in the aggregate, though the quality of those pauses (see landing_space) matters more than the raw percentage \u2014 the goal is purposeful silence, not just statistical gaps."
+      },
+      "rhetorical_arc": {
+        "score": 4,
+        "notes": "The energy arc is declining, meaning the sermon's vocal and emotional intensity peaks early-to-mid and trails off toward the close \u2014 restructuring so that the climactic vision and application land in the final five minutes would align vocal energy with content priority."
+      },
+      "verbal_clarity": {
+        "score": 8,
+        "notes": "Kyle's language is largely accessible, conversational, and jargon-light \u2014 he explains terms like 'atenizo' and 'Troxler effect' when introduced, and his sentence structures are simple enough for a general audience; occasional run-on thought patterns reduce clarity slightly in extended illustration sequences."
+      }
+    },
+    "gospel_check": {
+      "jesus_as_hero": true,
+      "heart_level_application": true,
+      "behavior_change_present": true,
+      "redemptive_history_noted": true,
+      "nonchristian_accessible": true,
+      "notes": "Kyle keeps Jesus meaningfully present throughout \u2014 the healing happens 'in the name of Jesus Christ of Nazareth,' and the sermon consistently points back to what Jesus does through the Spirit-empowered church. However, the cross and resurrection are assumed rather than named, and the gospel's indicative (what God has done) is somewhat eclipsed by the imperative (what you must do this week). A clearer statement of why we can see people the way Peter and John did \u2014 because we ourselves have been seen and loved by God at great cost \u2014 would ground the behavioral challenge more firmly in grace.",
+      "G_score": 6,
+      "G_note": "God is described as sovereign, merciful, and justice-seeking in the opening prayer, but within the sermon body His character is painted primarily through what He does (miracles, breaking gates) rather than through specific named attributes that shape a robust theology of God.",
+      "O_score": 7,
+      "O_note": "The human problem of familiarity blindness is named, illustrated compellingly, and applied to both individuals and institutions \u2014 it resonates as a real and felt problem, though its root in self-centeredness or pride could be named more directly.",
+      "S_score": 5,
+      "S_note": "Sin is gently implicated \u2014 'we haven't seen the people God placed there' \u2014 but it is framed primarily as a perceptual limitation rather than a moral one, softening the honest self-implication that would give the grace offer greater weight.",
+      "P_score": 8,
+      "P_note": "The roommate smell story and the Starbucks contemporization of Acts 3 are both creative, original, and well-executed illustrations that earn the audience's trust and make abstract spiritual truths tangible.",
+      "E_score": 5,
+      "E_note": "Jesus is present and named throughout, and the healing is explicitly done in His name, but the cross and resurrection are never explicitly referenced \u2014 the sermon assumes the gospel more than it proclaims it, which limits its evangelistic and doxological power.",
+      "L_score": 8,
+      "L_note": "The call to ask 'Can I pray for you?' is concrete, specific, slightly uncomfortable, and grace-motivated \u2014 Kyle frames it not as duty but as participation in what God is already doing, which is a healthy motivational posture.",
+      "gold_standard": "Partially",
+      "gold_standard_note": "Strong illustrations and a clear behavioral application lift the sermon, but with E=5 (cross/resurrection assumed, not proclaimed) and S=5 (sin named softly), the sermon does not fully meet the gold standard for gospel-centered expository preaching.",
+      "incomplete_flag": false
+    },
+    "rubric": {
+      "exegesis_theology": {
+        "context_set": 3,
+        "main_point_clear": 4,
+        "preached_jesus": 3,
+        "redemptive_history": 3
+      },
+      "application": {
+        "clear_helpful_application": 5,
+        "gospel_centered": 3,
+        "clear_response": 5,
+        "heart_care": 4,
+        "nonchristian_friendly": 4
+      },
+      "presentation": {
+        "engaging_intro": 4,
+        "clear_structure": 3,
+        "voice_inflection": 4
+      }
+    }
+  }
+}

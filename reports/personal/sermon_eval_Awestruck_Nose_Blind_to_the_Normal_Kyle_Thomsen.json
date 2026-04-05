@@ -1,0 +1,227 @@
+{
+  "speaker": "Kyle Thomsen",
+  "source": "You're Missing It   Kyle Thomsen.m4a",
+  "acoustic": {
+    "duration_min": 32.9,
+    "word_count": 5803,
+    "estimated_wpm": 176.6,
+    "filler_count": 140,
+    "filler_per_minute": 4.26,
+    "top_fillers": [
+      [
+        "like",
+        69
+      ],
+      [
+        "so",
+        38
+      ],
+      [
+        "right",
+        11
+      ],
+      [
+        "you know",
+        8
+      ],
+      [
+        "actually",
+        7
+      ]
+    ],
+    "pause_count": 310,
+    "dynamic_range_db": 62.5,
+    "talk_ratio": 0.8,
+    "pitch_cv": 0.324,
+    "arc_pattern": "declining",
+    "arc_thirds": {
+      "start": 0.0209,
+      "middle": 0.0175,
+      "end": 0.0153
+    },
+    "wpm_score": 8,
+    "filler_score": 2,
+    "dynamic_range_score": 10,
+    "pause_score": 5,
+    "vocal_variety_score": 10,
+    "talk_silence_score": 10,
+    "energy_arc_score": 4
+  },
+  "analysis": {
+    "sermon_title": "Awestruck: Nose Blind to the Normal",
+    "passage": "Acts 3:1-10",
+    "bottom_line": "When you stop, see someone, and offer what only God can give, miracles happen.",
+    "central_idea": "Familiarity blinds us to the people and work of God around us, but when we stop and see others through Spirit-empowered eyes, we become conduits of God's transforming power.",
+    "sticky_statement": "The phrase 'nose blind to the normal' is creative and memorable but may wear thin as a theological anchor without a tighter one-liner tied directly to the text's invitation.",
+    "encouragement": "Kyle demonstrates a genuine pastoral warmth and relational authenticity that makes the congregation feel cared for and seen, particularly in the vulnerable opening prayer over current events. His illustrative storytelling \u2014 the roommate smell, the Troxler effect, the Starbucks stand-in for Acts 3 \u2014 is creative, culturally accessible, and effectively bridges ancient text to modern life. He also excels at creating participatory moments (the 'can I pray for you?' practice) that move application from abstract to embodied.",
+    "growth_edges": [
+      "Filler word density (4.26/min, 140 total) significantly undercuts authority and clarity; intentional pausing to replace fillers with silence would dramatically improve perceived confidence and let key lines land harder.",
+      "The expository foundation is thin \u2014 while Acts 3:1-10 is referenced and narrated, the sermon spends more time in extended personal illustration and application than in careful verse-by-verse exegesis; the Greek word 'atenizo' is introduced but not developed, and the theological weight of Peter's declaration ('in the name of Jesus Christ of Nazareth') is never unpacked as the sermon's christological core.",
+      "The energy arc is declining, and the sermon's most theologically rich content (the gate as barrier, the name of Jesus as the operative power, the church's outward transformation) arrives late and underdeveloped; restructuring so that the biblical climax drives toward the application, rather than following it, would sharpen both the expository integrity and the emotional payoff."
+    ],
+    "structure": {
+      "overall_score": 3,
+      "sections": [
+        {
+          "label": "ME",
+          "title": "Personal Hook",
+          "summary": "Kyle opens with personal vulnerability about world events, then tells the extended college roommate 'nose blind' story to establish the sermon's central metaphor.",
+          "start_quote": "Good morning, friends. My name's Kyle, and I'm thrilled",
+          "word_count": 950,
+          "estimated_minutes": 5.4,
+          "score": 4,
+          "strength": "The roommate smell story is vivid, self-deprecating, and earns genuine rapport while effectively landing the 'familiarity blinds us' thesis.",
+          "growth": "The opening prayer, while pastorally appropriate, creates a tonal whiplash into a lighthearted college story \u2014 a brief transitional bridge would smooth the emotional shift."
+        },
+        {
+          "label": "WE",
+          "title": "Universal Bridge",
+          "summary": "Kyle broadens the nose-blind metaphor to the Troxler effect and asks whether we are blinded to people, pain, and God's activity around us.",
+          "start_quote": "In 1804, a Swiss physician created what's known as the Troxler effect",
+          "word_count": 420,
+          "estimated_minutes": 2.4,
+          "score": 3,
+          "strength": "The Troxler effect illustration is intellectually engaging and extends the metaphor well beyond mere sentimentality.",
+          "growth": "The 'WE' bridge moves quickly and could linger longer on the universally felt experience of missing people we love \u2014 the emotional resonance is named but not fully felt before moving to scripture."
+        },
+        {
+          "label": "GOD",
+          "title": "Biblical Text",
+          "summary": "Kyle narrates Acts 3:1-10, using a Starbucks drive-through analogy to modernize the scene, explaining the gate called Beautiful and Peter's healing declaration.",
+          "start_quote": "Let's let God open our eyes by first opening ourselves to the scriptures",
+          "word_count": 1400,
+          "estimated_minutes": 7.9,
+          "score": 3,
+          "strength": "The narrative retelling is engaging and the double-mention of the Beautiful Gate is correctly identified as Lukan emphasis, showing awareness of authorial intent.",
+          "growth": "The sermon never exegetes the theological engine of the passage \u2014 'in the name of Jesus Christ of Nazareth' \u2014 leaving the christological claim assumed rather than proclaimed; the text's own argument demands more weight here for a true expository treatment."
+        },
+        {
+          "label": "YOU",
+          "title": "Application",
+          "summary": "Kyle challenges listeners to stop, see someone this week, and ask 'Can I pray for you?' \u2014 practicing it aloud together in the service.",
+          "start_quote": "Here's the invitation. What I want to do is I want to give you this one challenge",
+          "word_count": 980,
+          "estimated_minutes": 5.5,
+          "score": 4,
+          "strength": "The participatory 'can I pray for you?' exercise is a bold, practical, and effective moment that makes application concrete and slightly uncomfortable in the best way.",
+          "growth": "The bonus question 'will you pray for me?' is a strong addition but arrives hastily and deserves more theological grounding \u2014 vulnerability in the body of Christ is a rich vein left only partially mined."
+        },
+        {
+          "label": "WE2",
+          "title": "Vision / Sendoff",
+          "summary": "Kyle casts a vision for the church as an outward-looking community that tears down gates, celebrates awestruck moments together, and becomes conduits of God's transforming power.",
+          "start_quote": "I want to be a church that's awestruck, not just because of what God does in our services",
+          "word_count": 430,
+          "estimated_minutes": 2.4,
+          "score": 3,
+          "strength": "The communal vision language \u2014 'we allow God to rip the gates down' \u2014 lands with energy and gives the congregation a corporate identity to inhabit.",
+          "growth": "The closing prayer and final sendoff are somewhat abrupt and the 'Walking Around These Walls' lyric reference is unexplained; a stronger declarative closing sentence tied to the passage would seal the sermon with theological weight."
+        }
+      ],
+      "flags": [
+        {
+          "severity": "warning",
+          "text": "The expository sermon type is claimed, but the text is primarily narrated and illustrated rather than exegeted \u2014 the meaning-generating work of Acts 3:6 ('in the name of Jesus Christ of Nazareth') is never substantively unpacked."
+        },
+        {
+          "severity": "warning",
+          "text": "Declining energy arc: the sermon's theological density decreases as it progresses, with the richest conceptual material (the gate, the name of Jesus, the church's transformation) arriving in abbreviated form near the end."
+        },
+        {
+          "severity": "info",
+          "text": "The opening prayer on Iran/current events (approx. 3 minutes) is pastorally sensitive but significantly delays the sermon's entry into its core content, compressing the biblical section."
+        }
+      ]
+    },
+    "vocal": {
+      "filler_words": {
+        "count": 140,
+        "per_minute": 4.26,
+        "examples": [
+          "you know",
+          "like",
+          "I don't know"
+        ],
+        "score": 2,
+        "notes": "At 4.26 fillers per minute, filler density is high enough to erode authority and distract attentive listeners; the most frequent offenders appear to be 'I don't know,' 'you know,' and 'like,' often clustered in transitional moments where a deliberate pause would serve far better."
+      },
+      "pace": {
+        "avg_wpm": 176.6,
+        "assessment": "fast",
+        "score": 6,
+        "notes": "176.6 WPM sits just outside the ideal 130\u2013165 WPM window, and the pace likely feels faster in emotional or illustrative sections; slowing down at key theological declarations would allow those moments to penetrate rather than pass."
+      },
+      "rhetorical_variation": {
+        "score": 10,
+        "db": 62.5,
+        "notes": "A dynamic range of 62.5 dB is excellent and suggests Kyle uses volume expressively and intentionally across the sermon. This wide range creates natural engagement and prevents listener fatigue."
+      },
+      "landing_space": {
+        "score": 7,
+        "count": 310,
+        "avg_duration_sec": 0.5,
+        "notes": "310 pauses across a 32.9-minute sermon reflects an average of roughly 9.4 pauses per minute, which is above the ideal 2\u20136/min window, suggesting many pauses are micro-pauses rather than weight-bearing rhetorical silences. Fewer, longer, more intentional pauses at key declarations would increase impact."
+      },
+      "pitch_variety": {
+        "score": 10,
+        "notes": "A pitch CV of 0.324 is strong and indicates genuine melodic range in delivery, which contributes to the conversational, engaging quality of Kyle's preaching style. This is a clear vocal asset."
+      },
+      "cognitive_breathing_room": {
+        "score": 10,
+        "talk_pct": 80,
+        "notes": "An 80% talk ratio falls within the ideal 78\u201392% window, suggesting Kyle gives listeners adequate space to process without excessive dead air. This balance supports comprehension and engagement."
+      },
+      "rhetorical_arc": {
+        "score": 4,
+        "notes": "The energy arc is declining, meaning the sermon's most animated and engaging moments are front-loaded in the illustrations, with energy tapering as the sermon moves into its most critical theological and applicational content. Restructuring to build toward a climactic close would significantly increase sermon impact."
+      },
+      "verbal_clarity": {
+        "score": 7,
+        "notes": "Kyle's language is generally accessible, conversational, and jargon-light, making the sermon easy to follow for unchurched listeners. Occasional structural looseness \u2014 incomplete sentences, mid-thought pivots \u2014 reduces precision at key moments where clarity matters most."
+      }
+    },
+    "gospel_check": {
+      "jesus_as_hero": true,
+      "heart_level_application": true,
+      "behavior_change_present": true,
+      "redemptive_history_noted": true,
+      "nonchristian_accessible": true,
+      "notes": "The sermon holds Jesus as the operative power behind the healing and positions the church as the continuation of his redemptive work, which is theologically sound. However, the cross and resurrection are assumed rather than proclaimed \u2014 'the name of Jesus Christ of Nazareth' is mentioned but its costly, cruciform foundation is never named. The sermon would be strengthened by making explicit why that name carries healing power, grounding the application in grace rather than spiritual technique.",
+      "G_score": 6,
+      "G_note": "God is described as sovereign, merciful, and the one who does what only God can do, but specific divine attributes tied to the text (e.g., God as the one who raises the dead, restores the broken) are gestured at rather than named with theological precision.",
+      "O_score": 7,
+      "O_note": "The human problem of spiritual blindness and self-absorption is named compellingly through the nose-blind metaphor and resonates with lived experience, though the deeper problem of sin as the root of our blindness to others is softened.",
+      "S_score": 5,
+      "S_note": "Sin is addressed indirectly \u2014 as blindness, routine, self-focus \u2014 and the sermon honestly implicates the hearer in having walked past the needy, but it stops short of naming this as moral failure requiring grace rather than just awareness.",
+      "P_score": 8,
+      "P_note": "The nose-blind roommate story, the Troxler effect, and the Starbucks modernization of Acts 3 are all creative, well-crafted illustrations that earn the right to be heard and make ancient text feel immediately relevant.",
+      "E_score": 5,
+      "E_note": "Jesus is named as the source of healing power and the sermon affirms the church as continuation of his ministry, but the cross, resurrection, and the specific reason 'his name' carries authority are not proclaimed \u2014 Jesus functions more as enabler than as crucified and risen Lord.",
+      "L_score": 8,
+      "L_note": "The 'can I pray for you?' challenge is specific, concrete, grace-motivated, and wisely calibrated to be uncomfortable without being coercive \u2014 a strong, embodied call to transformed living.",
+      "gold_standard": "Partially",
+      "gold_standard_note": "Strong illustration craft and a concrete grace-motivated application earn high marks, but the E-score of 5 reflects that Jesus' saving work is assumed rather than proclaimed, preventing the full gospel standard from being met.",
+      "incomplete_flag": false
+    },
+    "rubric": {
+      "exegesis_theology": {
+        "context_set": 3,
+        "main_point_clear": 4,
+        "preached_jesus": 3,
+        "redemptive_history": 3
+      },
+      "application": {
+        "clear_helpful_application": 5,
+        "gospel_centered": 3,
+        "clear_response": 5,
+        "heart_care": 4,
+        "nonchristian_friendly": 4
+      },
+      "presentation": {
+        "engaging_intro": 4,
+        "clear_structure": 3,
+        "voice_inflection": 4
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+        for name, measurement, score, note in elements:
+            sc = C_GREEN if score >= 8 else (C_RED if score <= 4 else C_NAVY)
+
+            # Name + score on one line
+            self.set_font("Helvetica", "B", 11)
+            self.cell(self.CW - 18, 7, safe(name))
+            self.set_text_color(*sc)
+            self.cell(18, 7, f"{score}/10", align="R", new_x="LMARGIN", new_y="NEXT")
+            self.set_text_color(0, 0, 0)
+
+            # Score bar: Courier/Mono, "█"*score + "░"*(10-score)
+            self._bar_row(score, 10, 10, self.CW)
+
+            # Measurement (italic, gray)
+            self.set_font("Helvetica", "I", 8)
+            self.set_text_color(*C_DGRAY)
+            self.multi_cell(self.CW, 4, safe(measurement))
+            self.set_text_color(0, 0, 0)
+
+            # Narrative note
+            self.set_font("Helvetica", "", 8)
+            self.multi_cell(self.CW, 4, safe(note))
+            self.ln(1)
+            self._rule()
+
+        # Average
+        sc = C_GREEN if avg >= 7 else (C_RED if avg <= 4 else C_NAVY)
+        self.set_font("Helvetica", "B", 11)
+        self.cell(self.CW - 25, 7, "Vocal Average")
+        self.set_text_color(*sc)
+        self.cell(25, 7, f"{avg}/10", align="R", new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+
+    # ── PAGE 3: Sermon Structure ─────────────────────────────────────────────
+
+    def page3(self, analysis):

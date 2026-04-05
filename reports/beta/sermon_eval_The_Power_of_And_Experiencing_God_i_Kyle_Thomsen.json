@@ -1,0 +1,231 @@
+{
+  "speaker": "Kyle Thomsen",
+  "source": "https://youtu.be/gl9_xdYITvk",
+  "acoustic": {
+    "duration_min": 39.2,
+    "word_count": 6266,
+    "estimated_wpm": 160.0,
+    "filler_count": 142,
+    "filler_per_minute": 3.63,
+    "top_fillers": [
+      [
+        "like",
+        51
+      ],
+      [
+        "so",
+        47
+      ],
+      [
+        "right",
+        14
+      ],
+      [
+        "you know",
+        8
+      ],
+      [
+        "literally",
+        8
+      ]
+    ],
+    "pause_count": 362,
+    "dynamic_range_db": 59.7,
+    "talk_ratio": 0.8,
+    "pitch_cv": 0.3,
+    "arc_pattern": "declining",
+    "arc_thirds": {
+      "start": 0.0341,
+      "middle": 0.0212,
+      "end": 0.0262
+    },
+    "wpm_score": 10,
+    "filler_score": 2,
+    "dynamic_range_score": 10,
+    "pause_score": 5,
+    "vocal_variety_score": 10,
+    "talk_silence_score": 10,
+    "energy_arc_score": 4
+  },
+  "analysis": {
+    "sermon_title": "The Power of And: Experiencing God in the Gap",
+    "passage": "Psalm 42:1-11",
+    "bottom_line": "In the gap between your desired and realized experience of God, hold hope and heartache together with the word 'and.'",
+    "big_idea": "God meets us in the honest tension between longing and loss, and resilient faith holds both hope and heartache together rather than resolving the gap prematurely.",
+    "sticky_statement": "The bottom line is pastoral and memorable but slightly long for portability; trimming it to 'Hope and heartache \u2014 God meets you in the and' would make it stickier and more repeatable.",
+    "encouragement": "Kyle demonstrates genuine pastoral warmth and vulnerability, weaving in personal stories (the cancer diagnosis call, Spurgeon, his father's hiking poles) that earn emotional credibility and make abstract theology feel lived-in. His exegetical instinct to slow down on the word 'downcast' and the Hebrew concept of nefesh shows real care for the text, and the hiking-pole metaphor as a closing visual is creative and theologically coherent. The consistent return to the 'and' framework gives the sermon a unifying thread that listeners can actually carry out the door.",
+    "coaching_priorities": [
+      "Reduce filler words (3.63/min is distracting): practice deliberate pausing instead of filling silence with 'like,' 'kind of,' and 'you know' \u2014 the pause itself communicates confidence and gives the congregation time to feel the weight of the text.",
+      "Reverse the declining energy arc by front-loading less housekeeping and saving the most emotionally charged material (the cancer call, the Spurgeon quote, the hiking poles) for a crescendo rather than a gradual wind-down; the sermon's best moments arrive late when listener attention is already flagging.",
+      "Sharpen the exegetical spine: the 'and' insight is excellent but arrives without a clear thesis statement early enough \u2014 state the big idea by minute 8-10 so listeners know what they are tracking, and give Psalm 42's structure (lament-refrain-lament-refrain) more explicit scaffolding so the text does more of the preaching."
+    ],
+    "structure": {
+      "overall_score": 3,
+      "sections": [
+        {
+          "label": "ME",
+          "title": "Personal Hook",
+          "summary": "Kyle welcomes the crowd, handles logistics, and introduces the Awestruck series acronym before landing on his personal observation that most people have a gap between their desired and realized experience of God.",
+          "start_quote": "Good morning, friends. Welcome. My name is Kyle.",
+          "word_count": 820,
+          "estimated_minutes": 5.1,
+          "score": 3,
+          "strength": "The conversational tone and self-disclosure about his own gap make him immediately relatable and lower the barrier for skeptics.",
+          "growth": "The opening spends nearly five minutes on logistics and series recap before the personal hook lands, delaying listener engagement; move the gap insight to within the first 90 seconds."
+        },
+        {
+          "label": "WE",
+          "title": "Universal Bridge",
+          "summary": "Kyle broadens the gap problem to the whole room using the head/heart/hands framework, normalizing spiritual longing and the frustration of unmet experience of God.",
+          "start_quote": "My experience is that for most of us, our desired experience",
+          "word_count": 610,
+          "estimated_minutes": 3.8,
+          "score": 4,
+          "strength": "The three-H framework (head, heart, hands) is accessible and inclusive, naming different kinds of listeners without alienating any of them.",
+          "growth": "The WE section is somewhat abstract and could be grounded faster with a brief vivid illustration before moving to the text."
+        },
+        {
+          "label": "GOD",
+          "title": "Biblical Text",
+          "summary": "Kyle reads and exposits Psalm 42, unpacking the Hebrew concept of nefesh, the word 'downcast,' the tension between verses 8 and 9, and the psalmist's geography (Mount Hermon) as a metaphor for distance from God.",
+          "start_quote": "We're in Psalm chapter 42 today. And as you're flipping there",
+          "word_count": 1850,
+          "estimated_minutes": 11.6,
+          "score": 4,
+          "strength": "The exegetical moments \u2014 nefesh, 'downcast,' the contradiction of verses 8-9, and Hermon's distance from the temple \u2014 are genuinely illuminating and respect the congregation's intelligence.",
+          "growth": "The psalm is read in fragments with significant commentary interruptions, which disrupts the emotional flow; read the entire psalm first without interruption to let it land, then exposit."
+        },
+        {
+          "label": "YOU",
+          "title": "Application",
+          "summary": "Kyle introduces the word 'and' as a spiritual posture of resilience, illustrates it with the cancer diagnosis phone call and Spurgeon's depression, redefines hope as conviction in God's unchanging character, and challenges listeners to go somewhere intentionally to seek God this week.",
+          "start_quote": "There's a very spiritual word here. You may not have heard it",
+          "word_count": 1900,
+          "estimated_minutes": 11.9,
+          "score": 4,
+          "strength": "The cancer-call story is the sermon's most powerful moment \u2014 emotionally precise, theologically integrated, and pastor-vulnerable in a way that models the 'and' for the congregation.",
+          "growth": "The practical geography challenge (go somewhere to encounter God) is good but arrives late and competes with several other application threads; streamline to one clear ask with one clear picture of what it looks like."
+        },
+        {
+          "label": "WE2",
+          "title": "Vision / Sendoff",
+          "summary": "Kyle uses hiking poles as a visual metaphor for hope and heartache as twin handholds for the journey, closes with a vision of a congregation that walks with both, and prays a gospel-centered prayer of repentance and gratitude.",
+          "start_quote": "Today what I want to give you is these two handholds, these two poles.",
+          "word_count": 720,
+          "estimated_minutes": 4.5,
+          "score": 4,
+          "strength": "The hiking-pole visual is memorable and physically present in the room, giving the big idea a tangible anchor that listeners will recall.",
+          "growth": "The closing prayer is strong theologically but the sendoff vision gets slightly muddled by the comedy around his father's hiking; keep the humor but make sure the final emotional note is awe and hope, not laughter."
+        }
+      ],
+      "flags": [
+        {
+          "severity": "warning",
+          "text": "Opening logistics (welcome, seating, new-member plug, series recap) consume approximately 5 minutes before the sermon's real hook arrives \u2014 consider compressing to 90 seconds."
+        },
+        {
+          "severity": "warning",
+          "text": "The 'and' thesis is the sermon's central insight but is not stated as a clear proposition until roughly minute 22; state it earlier so the whole message builds toward and from it."
+        },
+        {
+          "severity": "warning",
+          "text": "Energy arc is declining \u2014 the sermon's most emotionally powerful content (cancer call, Spurgeon, hiking poles) clusters in the final third when audience attention is naturally lower; redistribute for greater impact."
+        },
+        {
+          "severity": "info",
+          "text": "The song reference ('As the Deer') is mentioned but never actually quoted or sung, which creates a dangling expectation \u2014 either use it fully or cut the reference."
+        },
+        {
+          "severity": "info",
+          "text": "Multiple application tracks (nature hike, coffee shop, journaling, bring a friend) are all offered simultaneously; choosing one primary and one secondary would sharpen the listener's sense of next step."
+        }
+      ]
+    },
+    "vocal": {
+      "filler_words": {
+        "count": 142,
+        "per_minute": 3.63,
+        "examples": [
+          "like",
+          "kind of",
+          "you know"
+        ],
+        "score": 2,
+        "notes": "At 3.63 fillers per minute, verbal static is heavy enough to undermine the sermon's most tender moments \u2014 especially the cancer-call story where fillers interrupt emotional weight. Targeted drilling on replacing fillers with intentional silence will immediately elevate perceived authority and pastoral presence."
+      },
+      "pace": {
+        "avg_wpm": 160.0,
+        "assessment": "ideal",
+        "score": 10,
+        "notes": "160 WPM sits comfortably in the ideal range and gives listeners adequate processing time; the pace itself is not the problem, but fillers at this speed accumulate quickly, so filler reduction will feel like a pace improvement even without changing WPM."
+      },
+      "dynamic_range": {
+        "score": 10,
+        "db": 59.7,
+        "notes": "A dynamic range of 59.7 dB is excellent and indicates Kyle uses his full vocal instrument to create contrast between intimacy and proclamation. This is a genuine strength that should be leaned into even more intentionally at key textual moments."
+      },
+      "pause_usage": {
+        "score": 7,
+        "count": 362,
+        "avg_duration_sec": 0.5,
+        "notes": "362 pauses across 39 minutes works out to roughly 9.3 per minute, which is at the upper edge of the productive range and suggests pauses may be brief and reactive rather than strategic; training longer, purposeful pauses (2-4 seconds) at thesis moments would increase impact significantly."
+      },
+      "pitch_variety": {
+        "score": 10,
+        "notes": "A pitch CV of 0.300 is well above the 0.28 threshold for the highest score, indicating excellent melodic range and expressive vocal movement. Kyle's pitch variety is a clear asset that keeps listeners engaged across a nearly 40-minute sermon."
+      },
+      "talk_to_silence_ratio": {
+        "score": 10,
+        "talk_pct": 80,
+        "notes": "An 80% talk ratio falls squarely in the ideal 78-92% window, leaving meaningful white space without feeling halting. This ratio is healthy and should be maintained."
+      },
+      "energy_arc": {
+        "score": 4,
+        "notes": "A declining arc means the sermon opens with its highest energy and gradually loses momentum, which is the opposite of what a message about hope in the valley needs \u2014 the closing hiking-pole illustration and prayer are strong enough to anchor a crescendo, so restructuring the opening to build more slowly toward those moments would transform the listener experience."
+      }
+    },
+    "gospel_check": {
+      "jesus_as_hero": true,
+      "heart_level_application": true,
+      "behavior_change_present": true,
+      "redemptive_history_noted": true,
+      "nonchristian_accessible": true,
+      "notes": "Kyle explicitly names the Incarnation as God closing the gap, references Jesus's cry of dereliction ('My God, my God, why have you forsaken me?') as solidarity with the psalmist's lament, and the closing prayer articulates sin, repentance, and resurrection in clear language. Jesus is named as the hero and the model, though the cross and resurrection could be made more structurally central rather than appearing primarily in the closing prayer. The sermon is genuinely accessible to skeptics and the spiritually curious, with multiple entry points for those who do not yet believe.",
+      "G_score": 7,
+      "G_note": "God's character is described as a rock, a love that directs by day, and a presence that closes gaps \u2014 specific and pastoral, though his holiness and the weight of why the gap exists theologically could be developed more.",
+      "O_score": 8,
+      "O_note": "The human problem \u2014 the gap between desired and realized experience of God \u2014 is named clearly, illustrated personally, and resonates broadly across belief levels in the room.",
+      "S_score": 5,
+      "S_note": "Sin is acknowledged honestly in the closing prayer as the ultimate cause of the gap, but earlier in the sermon it is treated primarily as a 'blocker' in the practical sense rather than as a condition of the heart that implicates every listener.",
+      "P_score": 8,
+      "P_note": "The cancer-call illustration, the Spurgeon depression narrative, and the hiking-pole visual are all high-quality story and craft moments that earn the right to be heard and make the theology emotionally accessible.",
+      "E_score": 7,
+      "E_note": "Jesus is named as the one who closed the gap through Incarnation, is shown as solidarity-companion in lament, and is exalted in the closing prayer, but the cross and resurrection are referenced briefly rather than being structurally load-bearing in the sermon's argument.",
+      "L_score": 7,
+      "L_note": "The call to intentionally go somewhere to seek God, to adopt the 'and' language, and to take the next step with both hope and heartache is grace-motivated and concrete, though the multiplicity of suggested actions slightly diffuses the sharpness of the response.",
+      "gold_standard": "Partially",
+      "gold_standard_note": "Jesus is clearly the hero and several scores reach 7-8, but the cross and resurrection are not explicitly structural to the sermon's argument (E=7, not \u22658), and sin is underdeveloped as a heart-implicating problem (S=5), preventing a full 'Yes.'",
+      "incomplete_flag": false
+    },
+    "rubric": {
+      "exegesis_theology": {
+        "context_set": 3,
+        "main_point_clear": 3,
+        "preached_jesus": 4,
+        "redemptive_history": 4
+      },
+      "application": {
+        "clear_helpful_application": 4,
+        "gospel_centered": 4,
+        "clear_response": 3,
+        "heart_care": 5,
+        "nonchristian_friendly": 5
+      },
+      "presentation": {
+        "engaging_intro": 3,
+        "clear_structure": 3,
+        "voice_inflection": 5
+      }
+    }
+  }
+}
