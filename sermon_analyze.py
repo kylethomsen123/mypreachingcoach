@@ -483,21 +483,24 @@ C_GREEN = (30,  140, 60)
 # ── SermonPDF ─────────────────────────────────────────────────────────────────
 class SermonPDF(FPDF):
     """
-    4-page BIBL 350 sermon evaluation PDF.
+    5-page sermon evaluation PDF.
 
-    Page 1 -- Cover        : sermon title, score badges, bottom line,
-                             encouragement, top coaching priorities
+    Page 1 -- Cover        : sermon title, score badges, big idea,
+                             bottom line, encouragement, growth edges
     Page 2 -- Structure    : ME / WE / GOD / YOU / WE section cards with
-                             colored bands, quotes, strength, growth edge
-    Page 3 -- Vocal        : 7 acoustic elements, score bars, coaching notes
-    Page 4 -- Gospel Check : pass/fail checklist + BIBL 350 rubric table
-                             + manual scoring blanks
+                             colored bands, score bars, quotes, summary,
+                             strength, growth edge (never truncated)
+    Page 3 -- Vocal        : 8 acoustic/rhetorical elements, score bars,
+                             measurement lines, full coaching notes
+    Page 4 -- Gospel Check : Gold Standard badge, GOSPEL scoring table
+                             (G/O/S/P/E/L), rubric subtotals, manual blanks
+    Page 5 -- Scorecard    : all scores at a glance, coaching priorities
     """
 
     M  = 15.0    # left/right margin mm
     CW = 185.9   # usable content width (Letter 215.9 - 2*15)
 
-    GOLD   = (175, 130,  25)   # headings, passage, "TOP COACHING PRIORITIES"
+    GOLD   = (175, 130,  25)   # headings, passage, section labels
     ORANGE = (200, 110,  20)   # flags, medium-score bars
 
     # Colored band per Andy Stanley section label
@@ -508,6 +511,16 @@ class SermonPDF(FPDF):
         "YOU": (145,  35,  35),   # dark red
         "WE2": ( 90,  50, 150),   # purple
     }
+
+    # GOSPEL dimensions: (letter, display name, max weighted points)
+    GOSPEL_ROWS = [
+        ("G", "Good -- God's Character",    8),
+        ("O", "Obstacle -- Brokenness",     8),
+        ("S", "Sin -- Personal Complicity", 8),
+        ("P", "Perspective -- Fresh Craft", 6),
+        ("E", "Exalting Jesus",            20),
+        ("L", "Lordship / Living",         10),
+    ]
 
     # ── FPDF overrides ────────────────────────────────────────────────────────
 
@@ -839,7 +852,7 @@ class SermonPDF(FPDF):
         total_words = sum(s.get("word_count", 0) for s in sections) or 1
 
         for sec in sections:
-            self._check_page(40)   # new page if < 40 mm remain
+            self._check_page(42)   # new page if < 42 mm remain
 
             label    = sec.get("label", "")
             title    = sec.get("title", "")
@@ -849,6 +862,7 @@ class SermonPDF(FPDF):
             wc       = sec.get("word_count", 0)
             mins     = sec.get("estimated_minutes", 0.0)
             quote    = sec.get("start_quote", "")
+            summary  = sec.get("summary", "")
             strength = sec.get("strength", "")
             growth   = sec.get("growth", "")
             color    = self.SEC_CLR.get(label, C_NAVY)
@@ -868,6 +882,9 @@ class SermonPDF(FPDF):
                       new_x="LMARGIN", new_y="NEXT")
             self.set_text_color(0, 0, 0)
 
+            # Score bar
+            self._score_bar(score, 10, height=2)
+
             # Opening quote — italic, gray
             if quote:
                 self.set_x(self.M)
@@ -876,7 +893,13 @@ class SermonPDF(FPDF):
                 self.multi_cell(self.CW, 5, safe(f'"{quote}"'))
                 self.set_text_color(0, 0, 0)
 
-            # Strength — bold green label inline with normal text
+            # Summary — one-sentence section description
+            if summary:
+                self.set_x(self.M)
+                self.set_font("Helvetica", "", 9)
+                self.multi_cell(self.CW, 5, safe(summary))
+
+            # Strength — bold green label inline; write() wraps, never clips
             if strength:
                 self.set_x(self.M)
                 self.set_font("Helvetica", "B", 9)
@@ -887,7 +910,7 @@ class SermonPDF(FPDF):
                 self.write(5, safe(strength))
                 self.ln(6)
 
-            # Growth edge — bold red label inline with normal text
+            # Growth edge — write() keeps full label on same line, never clips
             if growth:
                 self.set_x(self.M)
                 self.set_font("Helvetica", "B", 9)
@@ -898,10 +921,10 @@ class SermonPDF(FPDF):
                 self.write(5, safe(growth))
                 self.ln(6)
 
-            self.ln(3)
+            self.ln(2)
 
-        # Guard: don't let the flags block start within 30 mm of the bottom
-        self._check_page(30)
+        # Guard: don't let the flags block start within 25 mm of the bottom
+        self._check_page(25)
 
         # Flag if GOD section exceeds 40% of total words
         god_sec = next((s for s in sections if s.get("label") == "GOD"), None)
@@ -1044,10 +1067,10 @@ class SermonPDF(FPDF):
 
         scores = []
         for name, score, meas_lines, note in elements:
-            self._check_page(45)   # new page if < 45 mm remain
+            self._check_page(35)   # new page if < 35 mm remain
 
             scores.append(score)
-            sc_col = C_GREEN if score >= 8 else (C_RED if score <= 4 else self.ORANGE)
+            sc_col    = C_GREEN if score >= 8 else (C_RED if score <= 4 else self.ORANGE)
             benchmark = get_benchmark_label(score)
 
             # Element name left, benchmark + score right
@@ -1067,7 +1090,7 @@ class SermonPDF(FPDF):
             # Proportional score bar
             self._score_bar(score, 10)
 
-            # Italic measurement lines
+            # Italic measurement lines — full CW width, no truncation
             for meas in meas_lines:
                 self.set_x(self.M)
                 self.set_font("Helvetica", "I", 9)
@@ -1075,13 +1098,13 @@ class SermonPDF(FPDF):
                 self.multi_cell(self.CW, 5, safe(meas))
                 self.set_text_color(0, 0, 0)
 
-            # Coaching note — full width, never truncated
+            # Coaching note — full CW width multi_cell, no fixed height cap
             if note:
                 self.set_x(self.M)
                 self.set_font("Helvetica", "", 10)
                 self.multi_cell(self.CW, 6, safe(note))
 
-            self.ln(4)
+            self.ln(3)
 
         # Delivery average (skip pitch score if no audio)
         counted = [s for s, (n, _, _, _) in zip(scores, elements)
@@ -1097,7 +1120,7 @@ class SermonPDF(FPDF):
                   new_x="LMARGIN", new_y="NEXT")
         self.set_text_color(0, 0, 0)
 
-    # ── Page 4: Gospel Check + BIBL 350 Rubric ────────────────────────────────
+    # ── Page 4: Gospel Check + GOSPEL Table + Rubric Summary ─────────────────
 
     def page4(self, gospel_check: dict, rubric: dict):
         self.add_page()
@@ -1113,42 +1136,33 @@ class SermonPDF(FPDF):
         pres_t = sum(pres.values()) if pres else 0
         rub_t  = ex_t + app_t + pres_t
 
-        # ── Gospel Check checklist ─────────────────────────────────────────────
         self._page_title("Gospel Check")
 
-        # behavior_change_present uses [Flag] not [Pass/Fail] — flags moralism risk
-        checklist = [
-            ("pass", gc.get("jesus_as_hero",            True),
-             "Jesus presented as hero, not moral example"),
-            ("pass", gc.get("heart_level_application",  True),
-             "Heart-level application (idols addressed)"),
-            ("flag", gc.get("behavior_change_present",  True),
-             "Behavior-change framing present"),
-            ("pass", gc.get("redemptive_history_noted", True),
-             "Redemptive history noted"),
-            ("pass", gc.get("nonchristian_accessible",  True),
-             "Accessible and valuable for non-Christians"),
-        ]
+        # ── Gold Standard badge ────────────────────────────────────────────────
+        gold_std  = gc.get("gold_standard", "Partially")
+        gold_note = gc.get("gold_standard_note", "")
+        gold_col  = (C_GREEN if gold_std == "Yes"
+                     else (C_RED if gold_std == "No" else self.ORANGE))
 
-        badge_w = 14   # mm — width of "[Pass]" / "[Fail]" / "[Flag]" column
+        self.set_x(self.M)
+        self.set_fill_color(*gold_col)
+        self.set_text_color(255, 255, 255)
+        self.set_font("Helvetica", "B", 10)
+        self.cell(self.CW, 7,
+                  safe(f"  Gospel Gold Standard: {gold_std}"),
+                  fill=True, new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
 
-        for mode, value, description in checklist:
+        if gold_note:
             self.set_x(self.M)
-            if mode == "flag":
-                badge = "[Flag]" if value else "[Fail]"
-                col   = self.ORANGE if value else C_RED
-            else:
-                badge = "[Pass]" if value else "[Fail]"
-                col   = C_GREEN if value else C_RED
-            self.set_font("Helvetica", "B", 9)
-            self.set_text_color(*col)
-            self.cell(badge_w, 5, badge)
-            self.set_font("Helvetica", "", 9)
+            self.set_font("Helvetica", "I", 9)
+            self.set_text_color(*C_DGRAY)
+            self.multi_cell(self.CW, 5, safe(gold_note))
             self.set_text_color(0, 0, 0)
-            self.multi_cell(self.CW - badge_w, 5, safe(description))
 
-        # Gospel Check: Christ Not Central banner (when incomplete_flag=True)
+        # Christ Not Central banner
         if gc.get("incomplete_flag", False):
+            self.ln(1)
             self.set_x(self.M)
             self.set_fill_color(*C_RED)
             self.set_text_color(255, 255, 255)
@@ -1157,21 +1171,107 @@ class SermonPDF(FPDF):
                       "  Gospel Check: Christ Not Central  (E score < 5)",
                       fill=True, new_x="LMARGIN", new_y="NEXT")
             self.set_text_color(0, 0, 0)
-            self.ln(2)
 
         # Gospel narrative paragraph
-        self.ln(1)
+        self.ln(2)
         self.set_x(self.M)
         self.set_font("Helvetica", "", 9)
         self.multi_cell(self.CW, 5, safe(gc.get("notes", "")))
-        self.ln(2)
+        self.ln(3)
+
+        # ── GOSPEL Scoring Table ───────────────────────────────────────────────
+        # Columns: Letter | Category | Pts/Max | Bar | Note
+        ltr_w  = 10
+        cat_w  = 48
+        sc_w   = 18
+        bar_w  = 28
+        note_w = self.CW - ltr_w - cat_w - sc_w - bar_w  # ~81.9 mm
+
+        # Header row
+        self.set_x(self.M)
+        self.set_fill_color(*C_NAVY)
+        self.set_text_color(255, 255, 255)
+        self.set_font("Helvetica", "B", 8)
+        self.cell(ltr_w,  6, "Ltr",           fill=True, align="C")
+        self.cell(cat_w,  6, "Category",       fill=True)
+        self.cell(sc_w,   6, "Pts/Max",        fill=True, align="C")
+        self.cell(bar_w,  6, "Score",          fill=True, align="C")
+        self.cell(note_w, 6, "Coaching Note",
+                  fill=True, new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+
+        gospel_total = 0
+        for i, (letter, category, max_pts) in enumerate(self.GOSPEL_ROWS):
+            score_raw = gc.get(f"{letter}_score", 0)
+            note_txt  = gc.get(f"{letter}_note", "")
+            pts       = round(score_raw * max_pts / 10)
+            gospel_total += pts
+
+            y0      = self.get_y()
+            bg_col  = (245, 245, 245) if i % 2 == 0 else (255, 255, 255)
+            bar_col = (C_GREEN if score_raw >= 8
+                       else (C_RED if score_raw <= 4 else self.ORANGE))
+            fill_bw = bar_w * score_raw / 10 if score_raw else 0
+
+            # Fixed-height columns
+            self.set_x(self.M)
+            self.set_fill_color(*bg_col)
+            self.set_font("Helvetica", "B", 9)
+            self.cell(ltr_w, 6, letter, fill=True, align="C")
+            self.set_font("Helvetica", "", 9)
+            self.cell(cat_w, 6, safe(category), fill=True)
+            self.set_font("Helvetica", "B", 9)
+            self.cell(sc_w, 6, f"{pts}/{max_pts}", fill=True, align="C")
+
+            # Mini progress bar — drawn as rect, does not advance cursor
+            bar_x = self.get_x()
+            self.set_fill_color(*bg_col)
+            self.rect(bar_x, y0, bar_w, 6, "F")
+            if fill_bw > 0:
+                self.set_fill_color(*bar_col)
+                self.rect(bar_x, y0, fill_bw, 6, "F")
+
+            # Note column — set_xy then multi_cell to properly reset X/Y
+            self.set_xy(bar_x + bar_w, y0)
+            self.set_fill_color(*bg_col)
+            self.set_font("Helvetica", "", 8)
+            self.multi_cell(note_w, 6, safe(note_txt), fill=True)
+
+            # Ensure Y advances at least one full row height
+            if self.get_y() < y0 + 6:
+                self.set_y(y0 + 6)
+
+        # Total row
+        y0 = self.get_y()
+        self.set_x(self.M)
+        self.set_fill_color(*C_LGRAY)
+        self.set_font("Helvetica", "B", 9)
+        self.cell(ltr_w + cat_w, 6, "  Total", fill=True)
+        self.cell(sc_w, 6, f"{gospel_total}/60", fill=True, align="C")
+
+        bar_x   = self.get_x()
+        tot_col = (C_GREEN if gospel_total >= 48
+                   else (C_RED if gospel_total <= 24 else self.ORANGE))
+        fill_bw = bar_w * gospel_total / 60 if gospel_total else 0
+        self.set_fill_color(*C_LGRAY)
+        self.rect(bar_x, y0, bar_w, 6, "F")
+        if fill_bw > 0:
+            self.set_fill_color(*tot_col)
+            self.rect(bar_x, y0, fill_bw, 6, "F")
+
+        self.set_xy(bar_x + bar_w, y0)
+        self.set_fill_color(*C_LGRAY)
+        self.set_font("Helvetica", "I", 8)
+        self.cell(note_w, 6,
+                  safe(get_benchmark_label(round(gospel_total / 60 * 10))),
+                  fill=True, new_x="LMARGIN", new_y="NEXT")
+        self.ln(4)
 
         self._rule(gap_before=0, gap_after=2)
 
-        # ── Sermon Evaluation Rubric ───────────────────────────────────────────
+        # ── Sermon Evaluation Rubric (compact subtotals) ───────────────────────
         self._page_title("Sermon Evaluation Rubric")
 
-        # Italic note about items that require in-person observation
         self.set_x(self.M)
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(*C_DGRAY)
@@ -1181,58 +1281,28 @@ class SermonPDF(FPDF):
         self.set_text_color(0, 0, 0)
         self.ln(2)
 
-        # Exegesis and Theology /20
-        self._rubric_block(
-            "Exegesis and Theology /20",
-            [
-                ("Clearly set context of passage",
-                 ex.get("context_set", 0)),
-                ("Revealed main point of text",
-                 ex.get("main_point_clear", 0)),
-                ("Clearly preached Jesus from the text",
-                 ex.get("preached_jesus", 0)),
-                ("Noted the special way God relates at this point"
-                 " in redemptive history",
-                 ex.get("redemptive_history", 0)),
-            ],
-            ex_t, 20,
-        )
-
-        # Application /25
-        self._rubric_block(
-            "Application /25",
-            [
-                ("Clear and helpful application for various types of people",
-                 app.get("clear_helpful_application", 0)),
-                ("Sermon was gospel-centered",
-                 app.get("gospel_centered", 0)),
-                ("Presented clear ways to respond",
-                 app.get("clear_response", 0)),
-                ("Showed care for the audience by preaching to their hearts",
-                 app.get("heart_care", 0)),
-                ("Non-Christian friendly",
-                 app.get("nonchristian_friendly", 0)),
-            ],
-            app_t, 25,
-        )
-
-        # Presentation /15 — voice items auto-scored; body language needs in-person
-        self._rubric_block(
-            "Presentation /15 -- vocal and in-person items scored separately",
-            [
-                ("Intro was engaging and in line with the text",
-                 pres.get("engaging_intro", 0)),
-                ("Main idea and overall structure was clear",
-                 pres.get("clear_structure", 0)),
-                ("Dynamic voice inflection"
-                 " (see vocal delivery page for detail)",
-                 pres.get("voice_inflection", 0)),
-            ],
-            pres_t, 15,
-        )
+        # Compact subtotal rows (category + score/max)
+        score_col_w = 22
+        lbl_w = self.CW - score_col_w
+        sub_rows = [
+            ("Exegesis and Theology", ex_t,   20),
+            ("Application",           app_t,  25),
+            ("Presentation (auto)",   pres_t, 15),
+        ]
+        for cat_lbl, sub, mx in sub_rows:
+            self.set_x(self.M)
+            self.set_font("Helvetica", "", 9)
+            self.cell(lbl_w, 6, safe(cat_lbl))
+            self.set_font("Helvetica", "B", 9)
+            self.cell(10, 6, str(sub), align="R")
+            self.set_font("Helvetica", "", 9)
+            self.set_text_color(*C_DGRAY)
+            self.cell(12, 6, f" / {mx}",
+                      new_x="LMARGIN", new_y="NEXT")
+            self.set_text_color(0, 0, 0)
 
         # Manual scoring blanks
-        self._rule(gap_before=0, gap_after=1)
+        self._rule(gap_before=2, gap_after=1)
         self.set_x(self.M)
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(*C_DGRAY)
@@ -1267,12 +1337,150 @@ class SermonPDF(FPDF):
             align="C")
         self.set_text_color(0, 0, 0)
 
+    # ── Page 5: Scorecard ─────────────────────────────────────────────────────
+
+    def page5(self, analysis: dict, gospel_check: dict):
+        self.add_page()
+        self._top_bar(f"Page {self.page_no()}")
+        self._page_title("Scorecard -- All Scores at a Glance")
+
+        ev = analysis
+        gc = gospel_check
+        lw = self.CW - 32   # label column width
+
+        # ── Structure Scores ──────────────────────────────────────────────────
+        self.set_x(self.M)
+        self.set_font("Helvetica", "B", 10)
+        self.set_text_color(*self.GOLD)
+        self.cell(self.CW, 6, "SERMON STRUCTURE",
+                  new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+
+        for sec in ev.get("structure", {}).get("sections", []):
+            raw_sc = sec.get("score", 0)
+            score  = round(raw_sc / 10, 1) if raw_sc > 10 else float(raw_sc)
+            label  = sec.get("label", "")
+            title  = sec.get("title", "")
+            bench  = get_benchmark_label(score)
+            sc_col = C_GREEN if score >= 8 else (C_RED if score <= 4 else self.ORANGE)
+
+            self.set_x(self.M)
+            self.set_font("Helvetica", "", 9)
+            self.cell(lw, 5, safe(f"{label}  {title}"))
+            self.set_text_color(*sc_col)
+            self.set_font("Helvetica", "B", 9)
+            self.cell(16, 5, f"{score}/10", align="R")
+            self.set_text_color(*C_DGRAY)
+            self.set_font("Helvetica", "", 8)
+            self.cell(16, 5, safe(bench), align="R",
+                      new_x="LMARGIN", new_y="NEXT")
+            self.set_text_color(0, 0, 0)
+
+        self.ln(3)
+
+        # ── Vocal / Rhetorical Scores ─────────────────────────────────────────
+        self.set_x(self.M)
+        self.set_font("Helvetica", "B", 10)
+        self.set_text_color(*self.GOLD)
+        self.cell(self.CW, 6, "VOCAL / RHETORICAL DELIVERY",
+                  new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+
+        va = ev.get("vocal", {})
+        vocal_items = [
+            ("Filler Words",             va.get("filler_words",            {}).get("score", 0)),
+            ("Pace (WPM)",               va.get("pace",                    {}).get("score", 0)),
+            ("Rhetorical Variation",     va.get("rhetorical_variation",    {}).get("score", 0)),
+            ("Landing Space",            va.get("landing_space",           {}).get("score", 0)),
+            ("Vocal Variety / Pitch",    va.get("pitch_variety",           {}).get("score", 0)),
+            ("Cognitive Breathing Room", va.get("cognitive_breathing_room",{}).get("score", 0)),
+            ("Rhetorical Arc",           va.get("rhetorical_arc",          {}).get("score", 0)),
+            ("Verbal Clarity",           va.get("verbal_clarity",          {}).get("score", 0)),
+        ]
+
+        for vname, vscore in vocal_items:
+            bench  = get_benchmark_label(vscore)
+            sc_col = C_GREEN if vscore >= 8 else (C_RED if vscore <= 4 else self.ORANGE)
+
+            self.set_x(self.M)
+            self.set_font("Helvetica", "", 9)
+            self.cell(lw, 5, safe(vname))
+            self.set_text_color(*sc_col)
+            self.set_font("Helvetica", "B", 9)
+            self.cell(16, 5, f"{vscore}/10", align="R")
+            self.set_text_color(*C_DGRAY)
+            self.set_font("Helvetica", "", 8)
+            self.cell(16, 5, safe(bench), align="R",
+                      new_x="LMARGIN", new_y="NEXT")
+            self.set_text_color(0, 0, 0)
+
+        self.ln(3)
+
+        # ── Gospel Scores ─────────────────────────────────────────────────────
+        self.set_x(self.M)
+        self.set_font("Helvetica", "B", 10)
+        self.set_text_color(*self.GOLD)
+        self.cell(self.CW, 6, "GOSPEL CHECK",
+                  new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+
+        gospel_total = 0
+        for letter, category, max_pts in self.GOSPEL_ROWS:
+            score_raw = gc.get(f"{letter}_score", 0)
+            pts       = round(score_raw * max_pts / 10)
+            gospel_total += pts
+            bench  = get_benchmark_label(score_raw)
+            sc_col = C_GREEN if score_raw >= 8 else (C_RED if score_raw <= 4 else self.ORANGE)
+
+            self.set_x(self.M)
+            self.set_font("Helvetica", "", 9)
+            self.cell(lw, 5, safe(f"{letter}  {category}  ({pts}/{max_pts} pts)"))
+            self.set_text_color(*sc_col)
+            self.set_font("Helvetica", "B", 9)
+            self.cell(16, 5, f"{score_raw}/10", align="R")
+            self.set_text_color(*C_DGRAY)
+            self.set_font("Helvetica", "", 8)
+            self.cell(16, 5, safe(bench), align="R",
+                      new_x="LMARGIN", new_y="NEXT")
+            self.set_text_color(0, 0, 0)
+
+        # Gospel total row
+        self.set_x(self.M)
+        self.set_fill_color(*C_LGRAY)
+        self.set_font("Helvetica", "B", 9)
+        self.cell(lw, 6, "  Gospel Total", fill=True)
+        self.cell(16, 6, f"{gospel_total}/60", align="R", fill=True)
+        self.cell(16, 6,
+                  safe(get_benchmark_label(round(gospel_total / 60 * 10))),
+                  align="R", fill=True, new_x="LMARGIN", new_y="NEXT")
+        self.ln(4)
+
+        # ── Coaching Priorities — action items ────────────────────────────────
+        self._rule(gap_before=0, gap_after=3)
+        self.set_x(self.M)
+        self.set_font("Helvetica", "B", 10)
+        self.set_text_color(*C_NAVY)
+        self.cell(self.CW, 6, "COACHING PRIORITIES -- Action Items",
+                  new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+        self.ln(1)
+
+        for i, priority in enumerate(ev.get("growth_edges", [])[:3], 1):
+            self.set_x(self.M)
+            self.set_font("Helvetica", "B", 9)
+            self.set_text_color(*C_NAVY)
+            self.write(6, f"{i}.  ")
+            self.set_font("Helvetica", "", 9)
+            self.set_text_color(0, 0, 0)
+            self.write(6, safe(priority))
+            self.ln(8)
+
 
 # ── PDF entry point ────────────────────────────────────────────────────────────
 def build_pdf(speaker: str, source_label: str, acoustic: dict,
               analysis: dict, gospel_check: dict, out_path: str,
               has_audio: bool = True, sermon_type: str = "expository"):
-    """Build and save the 4-page BIBL 350 sermon evaluation PDF."""
+    """Build and save the 5-page sermon evaluation PDF."""
     pdf = SermonPDF()
     pdf.has_audio   = has_audio
     pdf.sermon_type = sermon_type
@@ -1280,6 +1488,7 @@ def build_pdf(speaker: str, source_label: str, acoustic: dict,
     pdf.page2(analysis)
     pdf.page3(acoustic, analysis.get("vocal", {}))
     pdf.page4(gospel_check, analysis.get("rubric", {}))
+    pdf.page5(analysis, gospel_check)
     pdf.output(out_path)
 
 
