@@ -8,4 +8,4 @@ numpy
 soundfile
 scipy
 fpdf2
-yt-dlp
+yt-dlp>=2025.1.1

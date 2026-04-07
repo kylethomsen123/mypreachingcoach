@@ -3,7 +3,7 @@
 sermon_analyze.py — My Preaching Coach
 Usage: python3.11 sermon_analyze.py <audio_or_youtube_url> --name "Speaker Name"
 """
-import argparse, json, os, re, subprocess, sys, tempfile
+import argparse, base64, json, os, re, subprocess, sys, tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -58,6 +58,33 @@ def _ytdlp_bin() -> str:
     return "/usr/local/bin/yt-dlp" if os.path.exists("/usr/local/bin/yt-dlp") else "yt-dlp"
 
 
+def ensure_cookies_file() -> str | None:
+    """Decode YOUTUBE_COOKIES_B64 env var to /tmp/yt_cookies.txt. Returns path or None."""
+    cookies_b64 = os.environ.get("YOUTUBE_COOKIES_B64", "")
+    if not cookies_b64:
+        return None
+    try:
+        cookies_data = base64.b64decode(cookies_b64)
+        cookies_path = "/tmp/yt_cookies.txt"
+        with open(cookies_path, "wb") as f:
+            f.write(cookies_data)
+        return cookies_path
+    except Exception:
+        return None
+
+
+def _ytdlp_base_args() -> list:
+    """Return yt-dlp args common to all calls (cookies, client selection)."""
+    args = [
+        "--extractor-args", "youtube:player_client=mweb",
+        "--no-playlist",
+    ]
+    cookies_path = ensure_cookies_file()
+    if cookies_path:
+        args += ["--cookies", cookies_path]
+    return args
+
+
 def get_youtube_info(url: str) -> dict:
     """
     Fetch YouTube metadata without downloading the video.
@@ -67,7 +94,7 @@ def get_youtube_info(url: str) -> dict:
     """
     try:
         result = subprocess.run(
-            [_ytdlp_bin(), "--dump-json", "--no-warnings", url],
+            [_ytdlp_bin(), "--dump-json", "--no-warnings"] + _ytdlp_base_args() + [url],
             capture_output=True, text=True, timeout=30,
         )
         if result.returncode == 0 and result.stdout.strip():
@@ -95,8 +122,12 @@ def acquire_audio(source: str, tmpdir: str) -> str:
                        check=True, capture_output=True)
         return out
     print("  Downloading via yt-dlp ...")
-    subprocess.run([_ytdlp_bin(),"-x","--audio-format","mp3",
-                    "-o",os.path.join(tmpdir,"%(title)s.%(ext)s"),source], check=True)
+    subprocess.run(
+        [_ytdlp_bin(), "-x", "--audio-format", "mp3"]
+        + _ytdlp_base_args()
+        + ["-o", os.path.join(tmpdir, "%(title)s.%(ext)s"), source],
+        check=True,
+    )
     files = list(Path(tmpdir).glob("*.mp3"))
     if not files: sys.exit("yt-dlp produced no mp3.")
     return str(files[0])
