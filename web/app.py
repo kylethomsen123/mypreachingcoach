@@ -282,42 +282,63 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5050))
     app.run(host="0.0.0.0", debug=False, port=port)
 
-
 @app.route("/health")
 def health():
     """Diagnostic endpoint — checks ffmpeg, yt-dlp, and WARP proxy."""
-    import shutil
+    import shutil, subprocess as sp, socket
     checks = {}
 
-    # ffmpeg
     checks["ffmpeg"] = shutil.which("ffmpeg") or "NOT FOUND"
-
-    # yt-dlp
     checks["yt-dlp"] = shutil.which("yt-dlp") or "NOT FOUND"
-
-    # WARP proxy env
     checks["YTDLP_PROXY"] = os.environ.get("YTDLP_PROXY", "NOT SET")
+    checks["PYTHONUNBUFFERED"] = os.environ.get("PYTHONUNBUFFERED", "NOT SET")
 
-    # Try yt-dlp metadata fetch through proxy
+    # Test DNS resolution for warp service
     try:
-        import subprocess as sp
+        result = socket.getaddrinfo("docker-warp-socks.railway.internal", 9091)
+        checks["warp_dns"] = f"OK — {result[0][4]}"
+    except Exception as e:
+        checks["warp_dns"] = f"FAIL — {e}"
+
+    # Test TCP connection to warp proxy
+    try:
+        s = socket.socket(socket.AF_INET6 if ":" in checks.get("warp_dns","") else socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(5)
+        s.connect(("docker-warp-socks.railway.internal", 9091))
+        s.close()
+        checks["warp_tcp"] = "OK — connected"
+    except Exception as e:
+        checks["warp_tcp"] = f"FAIL — {e}"
+
+    # Test yt-dlp WITHOUT proxy (expect bot block)
+    try:
         cmd = ["yt-dlp", "--dump-json", "--no-warnings", "--no-playlist",
-               "--socket-timeout", "10"]
-        proxy = os.environ.get("YTDLP_PROXY", "")
-        if proxy:
-            cmd += ["--proxy", proxy]
-        cmd += ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
-        r = sp.run(cmd, capture_output=True, text=True, timeout=20)
+               "--socket-timeout", "10", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
+        r = sp.run(cmd, capture_output=True, text=True, timeout=15)
         if r.returncode == 0:
             import json as j
             info = j.loads(r.stdout.strip())
-            checks["yt-dlp_test"] = f"OK — {info.get('title', '?')}"
+            checks["yt-dlp_no_proxy"] = f"OK — {info.get('title', '?')}"
         else:
-            checks["yt-dlp_test"] = f"FAIL (rc={r.returncode}) — {r.stderr[:300]}"
+            checks["yt-dlp_no_proxy"] = f"FAIL (rc={r.returncode}) — {r.stderr[:200]}"
     except Exception as e:
-        checks["yt-dlp_test"] = f"ERROR — {e}"
+        checks["yt-dlp_no_proxy"] = f"ERROR — {e}"
 
-    # PYTHONUNBUFFERED
-    checks["PYTHONUNBUFFERED"] = os.environ.get("PYTHONUNBUFFERED", "NOT SET")
+    # Test yt-dlp WITH proxy
+    proxy = os.environ.get("YTDLP_PROXY", "")
+    if proxy:
+        try:
+            cmd = ["yt-dlp", "--dump-json", "--no-warnings", "--no-playlist",
+                   "--socket-timeout", "10", "--proxy", proxy,
+                   "https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
+            r = sp.run(cmd, capture_output=True, text=True, timeout=20)
+            if r.returncode == 0:
+                import json as j
+                info = j.loads(r.stdout.strip())
+                checks["yt-dlp_with_proxy"] = f"OK — {info.get('title', '?')}"
+            else:
+                checks["yt-dlp_with_proxy"] = f"FAIL (rc={r.returncode}) — {r.stderr[:200]}"
+        except Exception as e:
+            checks["yt-dlp_with_proxy"] = f"ERROR — {e}"
 
     return checks
