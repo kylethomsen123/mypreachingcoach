@@ -121,16 +121,8 @@ def acquire_audio(source: str, tmpdir: str) -> str:
     return str(files[0])
 
 # ── Step 2: Transcribe ────────────────────────────────────────────────────────
-def transcribe(mp3_path: str) -> str:
-    # Use Groq Whisper if available (9x cheaper), fall back to OpenAI Whisper
-    if GROQ_API_KEY:
-        client = openai.OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
-        whisper_model = "whisper-large-v3-turbo"
-        print("  Using Groq Whisper (whisper-large-v3-turbo)")
-    else:
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-        whisper_model = "whisper-1"
-        print("  Using OpenAI Whisper")
+def _do_transcribe(client, whisper_model: str, mp3_path: str) -> str:
+    """Run transcription with given client/model, handling chunking."""
     size = os.path.getsize(mp3_path)
     if size <= WHISPER_MAX_BYTES:
         print(f"  Single chunk ({size/1e6:.1f} MB) ...")
@@ -157,6 +149,23 @@ def transcribe(mp3_path: str) -> str:
     text = " ".join(parts)
     print(f"\n  Words: {len(text.split()):,}  |  Chunks: {len(chunks)}")
     return text
+
+
+def transcribe(mp3_path: str) -> str:
+    # Try Groq Whisper first (9x cheaper), fall back to OpenAI on rate limit
+    if GROQ_API_KEY:
+        try:
+            client = openai.OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
+            print("  Using Groq Whisper (whisper-large-v3-turbo)")
+            return _do_transcribe(client, "whisper-large-v3-turbo", mp3_path)
+        except Exception as e:
+            if "rate_limit" in str(e).lower() or "429" in str(e):
+                print("  Groq rate limit hit — falling back to OpenAI Whisper ...")
+            else:
+                raise
+    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    print("  Using OpenAI Whisper")
+    return _do_transcribe(client, "whisper-1", mp3_path)
 
 # ── Step 3: Acoustic analysis ─────────────────────────────────────────────────
 def _rms_frames(y: np.ndarray, frame_len: int, hop_len: int) -> np.ndarray:
