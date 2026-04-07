@@ -20,6 +20,7 @@ from fpdf import FPDF
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 OPENAI_API_KEY    = os.environ.get("OPENAI_API_KEY","")
+GROQ_API_KEY      = os.environ.get("GROQ_API_KEY","")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY","")
 WHISPER_MAX_BYTES = 24 * 1024 * 1024
 
@@ -120,12 +121,20 @@ def acquire_audio(source: str, tmpdir: str) -> str:
 
 # ── Step 2: Transcribe ────────────────────────────────────────────────────────
 def transcribe(mp3_path: str) -> str:
-    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    # Use Groq Whisper if available (9x cheaper), fall back to OpenAI Whisper
+    if GROQ_API_KEY:
+        client = openai.OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
+        whisper_model = "whisper-large-v3-turbo"
+        print("  Using Groq Whisper (whisper-large-v3-turbo)")
+    else:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        whisper_model = "whisper-1"
+        print("  Using OpenAI Whisper")
     size = os.path.getsize(mp3_path)
     if size <= WHISPER_MAX_BYTES:
         print(f"  Single chunk ({size/1e6:.1f} MB) ...")
         with open(mp3_path,"rb") as f:
-            r = client.audio.transcriptions.create(model="whisper-1",file=f,response_format="text")
+            r = client.audio.transcriptions.create(model=whisper_model,file=f,response_format="text")
         text = r if isinstance(r,str) else r.text
         print(f"  Words: {len(text.split()):,}  |  Chunks: 1")
         return text
@@ -142,7 +151,7 @@ def transcribe(mp3_path: str) -> str:
     for i,chunk in enumerate(chunks,1):
         print(f"    chunk {i}/{len(chunks)} ...", end="\r")
         with open(chunk,"rb") as f:
-            r = client.audio.transcriptions.create(model="whisper-1",file=f,response_format="text")
+            r = client.audio.transcriptions.create(model=whisper_model,file=f,response_format="text")
         parts.append(r if isinstance(r,str) else r.text)
     text = " ".join(parts)
     print(f"\n  Words: {len(text.split()):,}  |  Chunks: {len(chunks)}")
@@ -1573,7 +1582,8 @@ def main():
                     help="Sermon type for evaluation context (default: expository)")
     args = ap.parse_args()
 
-    if not OPENAI_API_KEY:    sys.exit("Set OPENAI_API_KEY environment variable.")
+    if not GROQ_API_KEY and not OPENAI_API_KEY:
+        sys.exit("Set GROQ_API_KEY or OPENAI_API_KEY environment variable.")
     if not ANTHROPIC_API_KEY: sys.exit("Set ANTHROPIC_API_KEY environment variable.")
 
     source       = args.source
