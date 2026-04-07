@@ -1562,12 +1562,10 @@ def print_terminal(speaker, acoustic, analysis):
 
 
 # ── Output paths ──────────────────────────────────────────────────────────────
-REPORTS_PERSONAL = os.path.expanduser(
-    "~/Desktop/MyPreachingCoach/reports/personal"
-)
-REPORTS_BETA = os.path.expanduser(
-    "~/Desktop/MyPreachingCoach/reports/beta"
-)
+# Use directory relative to this script (works on Railway /app/ and locally)
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPORTS_PERSONAL = os.path.join(_SCRIPT_DIR, "reports", "personal")
+REPORTS_BETA = os.path.join(_SCRIPT_DIR, "reports", "beta")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
