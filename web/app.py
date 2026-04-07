@@ -24,7 +24,7 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024  # 500 MB upload limit
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-BASE_DIR         = Path(__file__).parent.parent          # ~/Desktop/MyPreachingCoach/
+BASE_DIR         = Path(__file__).parent                  # same dir as app.py
 SCRIPT           = BASE_DIR / "sermon_analyze.py"
 REPORTS_PERSONAL = BASE_DIR / "reports" / "personal"
 REPORTS_BETA     = BASE_DIR / "reports" / "beta"
