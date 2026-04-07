@@ -136,7 +136,6 @@
     const isUrl = document.getElementById('src_url').checked;
     document.getElementById('url_field').classList.toggle('d-none', !isUrl);
     document.getElementById('file_field').classList.toggle('d-none', isUrl);
-    // Clear the inactive input so it doesn't submit stale values
     if (isUrl) {
       document.getElementById('file_input').value = '';
     } else {
