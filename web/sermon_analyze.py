@@ -68,7 +68,7 @@ def _ytdlp_base_args() -> list:
     ]
     proxy = os.environ.get("YTDLP_PROXY", "")
     if proxy:
-        args += ["--proxy", proxy]
+        args += ["--proxy", proxy, "--no-check-certificate"]
     return args
 
 
