@@ -1,3 +1,4 @@
 flask
 sendgrid
 python-dotenv
+gunicorn
