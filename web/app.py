@@ -281,3 +281,43 @@ def submitted():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5050))
     app.run(host="0.0.0.0", debug=False, port=port)
+
+
+@app.route("/health")
+def health():
+    """Diagnostic endpoint — checks ffmpeg, yt-dlp, and WARP proxy."""
+    import shutil
+    checks = {}
+
+    # ffmpeg
+    checks["ffmpeg"] = shutil.which("ffmpeg") or "NOT FOUND"
+
+    # yt-dlp
+    checks["yt-dlp"] = shutil.which("yt-dlp") or "NOT FOUND"
+
+    # WARP proxy env
+    checks["YTDLP_PROXY"] = os.environ.get("YTDLP_PROXY", "NOT SET")
+
+    # Try yt-dlp metadata fetch through proxy
+    try:
+        import subprocess as sp
+        cmd = ["yt-dlp", "--dump-json", "--no-warnings", "--no-playlist",
+               "--socket-timeout", "10"]
+        proxy = os.environ.get("YTDLP_PROXY", "")
+        if proxy:
+            cmd += ["--proxy", proxy]
+        cmd += ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
+        r = sp.run(cmd, capture_output=True, text=True, timeout=20)
+        if r.returncode == 0:
+            import json as j
+            info = j.loads(r.stdout.strip())
+            checks["yt-dlp_test"] = f"OK — {info.get('title', '?')}"
+        else:
+            checks["yt-dlp_test"] = f"FAIL (rc={r.returncode}) — {r.stderr[:300]}"
+    except Exception as e:
+        checks["yt-dlp_test"] = f"ERROR — {e}"
+
+    # PYTHONUNBUFFERED
+    checks["PYTHONUNBUFFERED"] = os.environ.get("PYTHONUNBUFFERED", "NOT SET")
+
+    return checks
