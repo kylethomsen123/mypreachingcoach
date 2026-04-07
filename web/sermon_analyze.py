@@ -61,7 +61,6 @@ def _ytdlp_bin() -> str:
 def _ytdlp_base_args() -> list:
     """Return yt-dlp args common to all calls (proxy, client selection)."""
     args = [
-        "--extractor-args", "youtube:player_client=mweb",
         "--no-playlist",
         "--retries", "3",
         "--socket-timeout", "30",
