@@ -2,26 +2,17 @@ version: "3.8"
 
 services:
   warp:
-    image: caomingjun/warp
+    image: ghcr.io/mon-ius/docker-warp-socks:v5
     restart: always
     ports:
-      - "1080:1080"
-    environment:
-      - WARP_SLEEP=2
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv6.conf.all.disable_ipv6=0
-      - net.ipv4.conf.all.src_valid_mark=1
-    volumes:
-      - warp_data:/var/lib/cloudflare-warp
+      - "9091:9091"
 
   web:
     build: ./web
     ports:
       - "${PORT:-5050}:${PORT:-5050}"
     environment:
-      - YTDLP_PROXY=socks5://warp:1080
+      - YTDLP_PROXY=socks5://warp:9091
       - PORT=${PORT:-5050}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -31,5 +22,4 @@ services:
     depends_on:
       - warp
 
-volumes:
-  warp_data:
+
