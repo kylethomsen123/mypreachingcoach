@@ -2,3 +2,10 @@ flask
 sendgrid
 python-dotenv
 gunicorn
+anthropic
+openai
+numpy
+soundfile
+scipy
+fpdf2
+yt-dlp
