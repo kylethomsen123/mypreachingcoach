@@ -3,7 +3,7 @@
 sermon_analyze.py — My Preaching Coach
 Usage: python3.11 sermon_analyze.py <audio_or_youtube_url> --name "Speaker Name"
 """
-import argparse, base64, json, os, re, subprocess, sys, tempfile
+import argparse, json, os, re, subprocess, sys, tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -58,30 +58,17 @@ def _ytdlp_bin() -> str:
     return "/usr/local/bin/yt-dlp" if os.path.exists("/usr/local/bin/yt-dlp") else "yt-dlp"
 
 
-def ensure_cookies_file() -> str | None:
-    """Decode YOUTUBE_COOKIES_B64 env var to /tmp/yt_cookies.txt. Returns path or None."""
-    cookies_b64 = os.environ.get("YOUTUBE_COOKIES_B64", "")
-    if not cookies_b64:
-        return None
-    try:
-        cookies_data = base64.b64decode(cookies_b64)
-        cookies_path = "/tmp/yt_cookies.txt"
-        with open(cookies_path, "wb") as f:
-            f.write(cookies_data)
-        return cookies_path
-    except Exception:
-        return None
-
-
 def _ytdlp_base_args() -> list:
-    """Return yt-dlp args common to all calls (cookies, client selection)."""
+    """Return yt-dlp args common to all calls (proxy, client selection)."""
     args = [
         "--extractor-args", "youtube:player_client=mweb",
         "--no-playlist",
+        "--retries", "3",
+        "--socket-timeout", "30",
     ]
-    cookies_path = ensure_cookies_file()
-    if cookies_path:
-        args += ["--cookies", cookies_path]
+    proxy = os.environ.get("YTDLP_PROXY", "")
+    if proxy:
+        args += ["--proxy", proxy]
     return args
 
 
