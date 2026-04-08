@@ -49,6 +49,7 @@ def send_report_email(to_email: str, preacher_name: str, pdf_path: str):
 
     api_key      = os.getenv("SENDGRID_API_KEY", "")
     from_email   = os.getenv("FROM_EMAIL", "mypreachingcoach@yourdomain.com")
+    notify_email = os.getenv("NOTIFY_EMAIL", "")        # Kyle gets a BCC of every report
     feedback_url = os.getenv("FEEDBACK_FORM_URL", "https://your-google-form-link-here")
 
     if not api_key:
@@ -134,9 +135,15 @@ It takes 2 minutes: <a href="{feedback_url}">{feedback_url}</a></p>
         Disposition("attachment"),
     )
 
+    if notify_email and notify_email != to_email:
+        from sendgrid.helpers.mail import Bcc
+        message.bcc = [Bcc(notify_email)]
+
     client   = sg_module.SendGridAPIClient(api_key)
     response = client.send(message)
     print(f"[email] Sent to {to_email} — HTTP {response.status_code}")
+    if notify_email and notify_email != to_email:
+        print(f"[email] BCC'd to {notify_email}")
 
 
 # ── Background job ─────────────────────────────────────────────────────────────
