@@ -132,4 +132,50 @@ The `SermonPDF` class in `sermon_analyze.py` has rendering bugs:
 
 ---
 
-*Last updated: March 24, 2026*
+## Deployment (Railway)
+
+- **App URL:** https://www.mypreachingcoach.org
+- **Platform:** Railway — project `proactive-vibrancy`
+- **Services:** `mypreachingcoach` (Flask app) + `docker-warp-socks` (WARP proxy)
+- **Volume:** `/app/reports` — persists PDFs and `jobs.json` across redeploys
+- **Railway CLI:** `railway service mypreachingcoach` to switch context, then `railway logs`, `railway variables`
+- **GitHub:** https://github.com/kylethomsen123/mypreachingcoach — push to `main` triggers auto-deploy
+
+## Admin Tools
+
+| URL | Purpose |
+|-----|---------|
+| `/health` | Check ffmpeg, yt-dlp, WARP proxy |
+| `/admin/status?key=ADMIN_KEY` | Live job dashboard — last 50 jobs with status/duration/errors |
+| `/admin/resend?key=ADMIN_KEY` | Manually resend a PDF to an email address |
+
+**ADMIN_KEY** is set in Railway env vars. Current value: `mpc-17ed97f9d952a28e`
+
+## Permissions Granted to Claude
+
+Claude has full authorization to do the following **without asking for confirmation**:
+
+- Read and edit any file in this project directory
+- Run `railway logs`, `railway variables`, `railway service` commands
+- Set Railway environment variables (`railway variables --set`)
+- `git add`, `git commit`, `git push` to `main` to trigger deploys
+- Call `curl` against `mypreachingcoach.org` endpoints (health, admin)
+- Use the `/admin/resend` endpoint to recover missed email reports
+- Pip install packages locally for testing
+
+Claude should still ask before:
+- Deleting files or reports from the Railway volume
+- Changing the SendGrid API key or other credential env vars
+- Making changes to the sermon_analyze.py prompt or scoring logic
+
+---
+
+## Root Cause Log (known past incidents)
+
+| Date | Symptom | Cause | Fix |
+|------|---------|-------|-----|
+| 2026-04-08 | Emails not sending | `FROM_EMAIL` set to unverified Gmail; SendGrid verified sender is `kylet@lifecconline.com` | Updated Railway `FROM_EMAIL` env var |
+
+---
+
+*Last updated: 2026-04-08*
