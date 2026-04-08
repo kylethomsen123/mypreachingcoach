@@ -139,11 +139,20 @@ It takes 2 minutes: <a href="{feedback_url}">{feedback_url}</a></p>
         from sendgrid.helpers.mail import Bcc
         message.bcc = [Bcc(notify_email)]
 
-    client   = sg_module.SendGridAPIClient(api_key)
-    response = client.send(message)
-    print(f"[email] Sent to {to_email} — HTTP {response.status_code}")
-    if notify_email and notify_email != to_email:
-        print(f"[email] BCC'd to {notify_email}")
+    client = sg_module.SendGridAPIClient(api_key)
+    try:
+        response = client.send(message)
+        print(f"[email] Sent to {to_email} — HTTP {response.status_code}")
+        if notify_email and notify_email != to_email:
+            print(f"[email] BCC'd to {notify_email}")
+    except Exception as email_err:
+        print(f"[email] FAILED sending to {to_email}")
+        print(f"[email] FROM_EMAIL was: {from_email}")
+        if hasattr(email_err, 'status_code'):
+            print(f"[email] HTTP status: {email_err.status_code}")
+        if hasattr(email_err, 'body'):
+            print(f"[email] Response body: {email_err.body}")
+        raise
 
 
 # ── Background job ─────────────────────────────────────────────────────────────
@@ -282,6 +291,50 @@ def submit():
 @app.route("/submitted")
 def submitted():
     return render_template("submitted.html")
+
+
+@app.route("/admin/resend", methods=["GET", "POST"])
+def admin_resend():
+    """Admin endpoint to resend a PDF report by email (for missed/failed sends)."""
+    admin_key = os.getenv("ADMIN_KEY", "")
+    if request.args.get("key") != admin_key or not admin_key:
+        return "Unauthorized", 403
+
+    if request.method == "POST":
+        pdf_name     = request.form.get("pdf_name", "").strip()
+        to_email     = request.form.get("email", "").strip()
+        preacher     = request.form.get("name", "").strip()
+        pdf_path     = str(REPORTS_BETA / pdf_name)
+
+        if not pdf_name or not to_email or not preacher:
+            return "Missing pdf_name, email, or name", 400
+        if not (REPORTS_BETA / pdf_name).exists():
+            return f"PDF not found: {pdf_name}", 404
+
+        try:
+            send_report_email(to_email, preacher, pdf_path)
+            return f"Sent {pdf_name} to {to_email}", 200
+        except Exception as e:
+            return f"Failed: {e}", 500
+
+    # GET — list available PDFs
+    pdfs = sorted(REPORTS_BETA.glob("*.pdf"), key=lambda p: p.stat().st_mtime, reverse=True)
+    rows = "".join(
+        f"<tr><td>{p.name}</td><td>{p.stat().st_size // 1024}KB</td></tr>"
+        for p in pdfs
+    )
+    form = f"""
+    <html><body>
+    <h2>Resend Report Email</h2>
+    <table border=1>{rows}</table>
+    <form method=POST action="/admin/resend?key={admin_key}">
+      PDF filename: <input name="pdf_name" size=60><br>
+      Preacher name: <input name="name" size=30><br>
+      Email: <input name="email" size=40><br>
+      <input type=submit value="Send">
+    </form>
+    </body></html>"""
+    return form
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
