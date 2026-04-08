@@ -5,11 +5,14 @@ Then open: http://localhost:5050
 """
 
 import base64
+import json
 import os
 import shutil
 import sys
 import threading
 import subprocess
+import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -31,11 +34,49 @@ REPORTS_BETA     = BASE_DIR / "reports" / "beta"
 
 REPORTS_BETA.mkdir(parents=True, exist_ok=True)
 
+JOBS_FILE  = Path("/app/reports/jobs.json")   # Railway persistent volume
+_jobs_lock = threading.Lock()                  # serialises all reads + writes
+
 # Accepted audio/video extensions
 ALLOWED_EXTENSIONS = {
     ".mp3", ".mp4", ".m4a", ".wav", ".flac",
     ".aac", ".ogg", ".webm", ".mov",
 }
+
+
+# ── Job logging ───────────────────────────────────────────────────────────────
+def log_job(job_id: str, **fields) -> None:
+    """Upsert a job record into JOBS_FILE. Thread-safe. Silent on missing volume."""
+    if not JOBS_FILE.parent.exists():
+        return
+    with _jobs_lock:
+        try:
+            jobs = json.loads(JOBS_FILE.read_text()) if JOBS_FILE.exists() else []
+            if not isinstance(jobs, list):
+                jobs = []
+        except (json.JSONDecodeError, OSError):
+            jobs = []
+        for record in jobs:
+            if record.get("job_id") == job_id:
+                record.update(fields)
+                break
+        else:
+            jobs.append({"job_id": job_id, **fields})
+        jobs = jobs[-200:]
+        tmp = JOBS_FILE.with_suffix(".tmp")
+        try:
+            tmp.write_text(json.dumps(jobs, indent=2, default=str))
+            tmp.replace(JOBS_FILE)
+        except OSError as e:
+            print(f"[jobs] WARNING: could not write jobs.json — {e}")
+
+
+def _mask_email(email: str) -> str:
+    """Return 'k***@example.com' — first char + *** + @domain."""
+    if "@" not in email:
+        return "***"
+    local, domain = email.split("@", 1)
+    return local[0] + "***@" + domain
 
 
 # ── Email ──────────────────────────────────────────────────────────────────────
@@ -164,13 +205,28 @@ def process_sermon(name: str, source: str, email: str,
     2. Moves the output PDF from reports/personal/ to reports/beta/.
     3. Sends the PDF by email.
     4. Cleans up any uploaded temp file.
+    5. Logs status at each stage to jobs.json.
     """
-    print(f"[job] Starting — preacher={name!r}  email={email!r}  type={source_type}")
+    job_id     = str(uuid.uuid4())
+    start_time = time.monotonic()
+    timestamp  = datetime.utcnow().isoformat(timespec="seconds") + "Z"
 
-    # Snapshot existing PDFs in personal/ so we can identify the new one after the run
+    log_job(job_id,
+        timestamp     = timestamp,
+        preacher_name = name,
+        email         = _mask_email(email),
+        source_type   = source_type,
+        status        = "started",
+        pdf_name      = None,
+        error_msg     = None,
+        duration_sec  = None,
+    )
+    print(f"[job] Starting — id={job_id[:8]}  preacher={name!r}  email={email!r}  type={source_type}")
+
     existing_pdfs = set(REPORTS_PERSONAL.glob("*.pdf"))
 
     try:
+        log_job(job_id, status="analyzing")
         cmd = [sys.executable, str(SCRIPT), source, "--name", name]
         print(f"[job] Running: {' '.join(cmd)}")
 
@@ -179,28 +235,34 @@ def process_sermon(name: str, source: str, email: str,
             capture_output=True,
             text=True,
             timeout=1800,   # 30-minute hard limit
-            # stdin is closed so the script never hangs waiting for input
             stdin=subprocess.DEVNULL,
         )
 
         if result.returncode != 0:
             print(f"[job] ERROR: script exited {result.returncode}")
-            # Print the last 2 000 chars of stderr so the problem is visible
             print(f"[job] stderr:\n{result.stderr[-2000:]}")
+            log_job(job_id,
+                status       = "error",
+                error_msg    = f"script exited {result.returncode}: {result.stderr[-300:]}",
+                duration_sec = round(time.monotonic() - start_time, 1),
+            )
             return
 
         print("[job] Analysis complete.")
         if result.stdout:
-            print(result.stdout[-1000:])   # show tail of script output
+            print(result.stdout[-1000:])
 
         # ── Find the newly created PDF ────────────────────────────────────────
         new_pdfs = set(REPORTS_PERSONAL.glob("*.pdf")) - existing_pdfs
-
         if not new_pdfs:
-            # Fallback: just take the most recently modified PDF in personal/
             all_pdfs = sorted(REPORTS_PERSONAL.glob("*.pdf"),
                               key=lambda p: p.stat().st_mtime)
             if not all_pdfs:
+                log_job(job_id,
+                    status       = "error",
+                    error_msg    = "No PDF found in reports/personal/ after analysis",
+                    duration_sec = round(time.monotonic() - start_time, 1),
+                )
                 print("[job] ERROR: No PDF found in reports/personal/")
                 return
             new_pdfs = {all_pdfs[-1]}
@@ -216,15 +278,38 @@ def process_sermon(name: str, source: str, email: str,
         if json_src.exists():
             shutil.move(str(json_src), str(REPORTS_BETA / json_src.name))
 
+        log_job(job_id, status="pdf_ready", pdf_name=pdf_src.name)
+
         # ── Email the report ──────────────────────────────────────────────────
-        send_report_email(email, name, str(pdf_dst))
+        try:
+            send_report_email(email, name, str(pdf_dst))
+            log_job(job_id,
+                status       = "email_sent",
+                duration_sec = round(time.monotonic() - start_time, 1),
+            )
+        except Exception as email_exc:
+            log_job(job_id,
+                status       = "email_failed",
+                error_msg    = str(email_exc)[:400],
+                duration_sec = round(time.monotonic() - start_time, 1),
+            )
+            print(f"[job] email FAILED: {email_exc}")
 
     except subprocess.TimeoutExpired:
+        log_job(job_id,
+            status       = "error",
+            error_msg    = "Analysis timed out after 30 minutes",
+            duration_sec = round(time.monotonic() - start_time, 1),
+        )
         print("[job] ERROR: Analysis timed out after 30 minutes.")
     except Exception as exc:
+        log_job(job_id,
+            status       = "error",
+            error_msg    = str(exc)[:400],
+            duration_sec = round(time.monotonic() - start_time, 1),
+        )
         print(f"[job] ERROR: {exc}")
     finally:
-        # Always clean up uploaded temp file, even on failure
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
             print(f"[job] Cleaned up temp file: {tmp_path}")
@@ -335,6 +420,34 @@ def admin_resend():
     </form>
     </body></html>"""
     return form
+
+
+@app.route("/admin/status")
+def admin_status():
+    """Admin job log — shows last 50 jobs in a clean HTML table."""
+    admin_key = os.getenv("ADMIN_KEY", "")
+    if request.args.get("key") != admin_key or not admin_key:
+        return "Unauthorized", 403
+
+    jobs = []
+    volume_warning = None
+    if not JOBS_FILE.parent.exists():
+        volume_warning = "/app/reports volume is not mounted — no job data available."
+    elif JOBS_FILE.exists():
+        try:
+            with _jobs_lock:
+                jobs = json.loads(JOBS_FILE.read_text())
+            if not isinstance(jobs, list):
+                jobs = []
+        except (json.JSONDecodeError, OSError) as e:
+            volume_warning = f"Could not read jobs.json: {e}"
+
+    jobs = list(reversed(jobs))[:50]
+    has_running = any(j.get("status") in {"started", "analyzing"} for j in jobs)
+
+    return render_template("admin_status.html",
+        jobs=jobs, has_running=has_running,
+        volume_warning=volume_warning, admin_key=admin_key)
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
