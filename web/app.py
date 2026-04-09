@@ -79,6 +79,43 @@ def _mask_email(email: str) -> str:
     return local[0] + "***@" + domain
 
 
+def _mark_interrupted_jobs() -> None:
+    """On startup, mark any jobs still in 'queued'/'started'/'analyzing' as interrupted.
+
+    These are jobs whose background thread was killed by a server restart mid-flight.
+    Without this, they'd show as 'started' forever with no indication of what happened.
+    """
+    if not JOBS_FILE.exists():
+        return
+    with _jobs_lock:
+        try:
+            jobs = json.loads(JOBS_FILE.read_text())
+            if not isinstance(jobs, list):
+                return
+        except (json.JSONDecodeError, OSError):
+            return
+
+        interrupted = [j for j in jobs if j.get("status") in {"queued", "started", "analyzing"}]
+        if not interrupted:
+            return
+
+        for job in interrupted:
+            job["status"]    = "error"
+            job["error_msg"] = "Server restarted — job was interrupted before completing"
+        try:
+            tmp = JOBS_FILE.with_suffix(".tmp")
+            tmp.write_text(json.dumps(jobs, indent=2, default=str))
+            tmp.replace(JOBS_FILE)
+            for job in interrupted:
+                print(f"[startup] Marked job {job.get('job_id','?')[:8]} as interrupted "
+                      f"(preacher={job.get('preacher_name','?')!r}  "
+                      f"email={job.get('email','?')!r})")
+        except OSError as e:
+            print(f"[startup] WARNING: could not write interrupted jobs — {e}")
+
+
+_mark_interrupted_jobs()   # surface any jobs killed by a prior restart
+
 # ── Email ──────────────────────────────────────────────────────────────────────
 def send_report_email(to_email: str, preacher_name: str, pdf_path: str):
     """Send the finished PDF report via SendGrid."""
@@ -198,7 +235,8 @@ It takes 2 minutes: <a href="{feedback_url}">{feedback_url}</a></p>
 
 # ── Background job ─────────────────────────────────────────────────────────────
 def process_sermon(name: str, source: str, email: str,
-                   source_type: str, tmp_path: Optional[str] = None):
+                   source_type: str, tmp_path: Optional[str] = None,
+                   job_id: Optional[str] = None):
     """
     Runs in a background thread.
     1. Calls sermon_analyze.py as a subprocess (inherits env vars).
@@ -207,7 +245,8 @@ def process_sermon(name: str, source: str, email: str,
     4. Cleans up any uploaded temp file.
     5. Logs status at each stage to jobs.json.
     """
-    job_id     = str(uuid.uuid4())
+    if job_id is None:
+        job_id = str(uuid.uuid4())
     start_time = time.monotonic()
     timestamp  = datetime.utcnow().isoformat(timespec="seconds") + "Z"
 
@@ -362,10 +401,26 @@ def submit():
         source = tmp_path
         print(f"[upload] Saved to {tmp_path}")
 
+    # ── Log the submission before launching the thread ────────────────────────
+    # This ensures a record exists in jobs.json even if the server restarts
+    # and kills the daemon thread before it can write its own first log entry.
+    job_id = str(uuid.uuid4())
+    log_job(job_id,
+        timestamp     = datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        preacher_name = name,
+        email         = _mask_email(email),
+        source_type   = source_type,
+        status        = "queued",
+        pdf_name      = None,
+        error_msg     = None,
+        duration_sec  = None,
+    )
+    print(f"[submit] Queued job {job_id[:8]}  preacher={name!r}  email={email!r}")
+
     # ── Fire background thread and redirect immediately ───────────────────────
     thread = threading.Thread(
         target=process_sermon,
-        args=(name, source, email, source_type, tmp_path),
+        args=(name, source, email, source_type, tmp_path, job_id),
         daemon=True,
     )
     thread.start()
