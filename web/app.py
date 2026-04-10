@@ -117,6 +117,43 @@ def _mark_interrupted_jobs() -> None:
 _mark_interrupted_jobs()   # surface any jobs killed by a prior restart
 
 # ── Email ──────────────────────────────────────────────────────────────────────
+def send_confirmation_email(to_email: str, preacher_name: str):
+    """Send an immediate confirmation email after sermon submission. Non-blocking."""
+    import sendgrid as sg_module
+    from sendgrid.helpers.mail import Mail
+
+    api_key    = os.getenv("SENDGRID_API_KEY", "")
+    from_email = os.getenv("FROM_EMAIL", "")
+
+    if not api_key or not from_email:
+        print("[confirm] Skipping — SENDGRID_API_KEY or FROM_EMAIL not set.")
+        return
+
+    greeting = f"Hey {preacher_name}," if preacher_name else "Hey there,"
+
+    body = (
+        f"{greeting}\n\n"
+        "Love that you're investing in your preaching. We've got your sermon "
+        "and are putting together your feedback report now — look for it in about 10 minutes.\n\n"
+        "Keep growing,\n"
+        "MyPreachingCoach\n"
+    )
+
+    message = Mail(
+        from_email=from_email,
+        to_emails=to_email,
+        subject="Your feedback is on the way",
+        plain_text_content=body,
+    )
+
+    try:
+        client   = sg_module.SendGridAPIClient(api_key)
+        response = client.send(message)
+        print(f"[confirm] Sent to {to_email} — HTTP {response.status_code}")
+    except Exception as e:
+        print(f"[confirm] FAILED sending confirmation to {to_email}: {e}")
+
+
 def send_report_email(to_email: str, preacher_name: str, pdf_path: str):
     """Send the finished PDF report via SendGrid."""
     import sendgrid as sg_module
@@ -416,6 +453,10 @@ def submit():
         duration_sec  = None,
     )
     print(f"[submit] Queued job {job_id[:8]}  preacher={name!r}  email={email!r}")
+
+    # ── Send confirmation email (non-blocking, before analysis begins) ─────────
+    if "@" in email:
+        send_confirmation_email(email, name)
 
     # ── Fire background thread and redirect immediately ───────────────────────
     thread = threading.Thread(
