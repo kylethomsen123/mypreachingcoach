@@ -1551,6 +1551,12 @@ def main():
                     choices=["expository", "topical", "narrative", "liturgical"],
                     dest="sermon_type",
                     help="Sermon type for evaluation context (default: expository)")
+    ap.add_argument("--start-sec", type=int, default=None,
+                    dest="start_sec",
+                    help="Trim audio: start offset in seconds (used for full-service recordings)")
+    ap.add_argument("--end-sec", type=int, default=None,
+                    dest="end_sec",
+                    help="Trim audio: end offset in seconds (used for full-service recordings)")
     args = ap.parse_args()
 
     if not GROQ_API_KEY and not OPENAI_API_KEY:
@@ -1604,6 +1610,20 @@ def main():
         print("\n[1/4] Acquiring audio ...")
         mp3 = acquire_audio(source, tmpdir)
         print(f"  Ready: {mp3}")
+
+        # ── Trim to sermon window if --start-sec / --end-sec were provided ────
+        if args.start_sec is not None and args.end_sec is not None:
+            print(f"  Trimming to sermon window: {args.start_sec}s – {args.end_sec}s ...")
+            trimmed = os.path.join(tmpdir, "sermon_trimmed.mp3")
+            subprocess.run([
+                "ffmpeg", "-y", "-i", mp3,
+                "-ss", str(args.start_sec), "-to", str(args.end_sec),
+                "-vn", "-c:a", "libmp3lame", "-q:a", "4",
+                trimmed,
+            ], check=True, capture_output=True)
+            mp3 = trimmed
+            print(f"  Trimmed audio ready: {mp3}")
+        # ─────────────────────────────────────────────────────────────────────
 
         print("\n[2/4] Transcribing with Whisper ...")
         transcript = transcribe(mp3)

@@ -43,6 +43,12 @@ ALLOWED_EXTENSIONS = {
     ".aac", ".ogg", ".webm", ".mov",
 }
 
+# ── Sermon detection feature flag ─────────────────────────────────────────────
+# Set SERMON_DETECTION=true in Railway env vars to enable auto sermon detection.
+# To disable instantly: delete the SERMON_DETECTION variable in Railway.
+# No code change or redeploy needed — just removing the env var turns it off.
+SERMON_DETECTION_THRESHOLD_SECS = 55 * 60   # only trigger for uploads > 55 min
+
 
 # ── Job logging ───────────────────────────────────────────────────────────────
 def log_job(job_id: str, **fields) -> None:
@@ -270,10 +276,131 @@ It takes 2 minutes: <a href="{feedback_url}">{feedback_url}</a></p>
         raise
 
 
+# ── Sermon detection helpers ──────────────────────────────────────────────────
+
+def get_audio_duration(path: str) -> float:
+    """Return file duration in seconds via ffprobe. Returns 0.0 on failure."""
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", path],
+            capture_output=True, text=True, timeout=30,
+        )
+        return float(result.stdout.strip())
+    except Exception:
+        return 0.0
+
+
+def detect_sermon_segment(tmp_path: str, total_duration: float) -> dict:
+    """
+    Samples the audio at 4 points, transcribes each 90-second clip with
+    Whisper, then asks Claude to identify the sermon start/end.
+    Runs synchronously — typically takes ~30 seconds, well within timeout.
+    """
+    import openai as _openai
+    import anthropic as _anthropic
+
+    oa_client  = _openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
+    ant_client = _anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+
+    sample_len  = 90          # seconds per clip
+    sample_pcts = [0.10, 0.30, 0.55, 0.80]
+    sample_id   = str(uuid.uuid4().hex)[:10]
+    samples     = []
+
+    for pct in sample_pcts:
+        start     = int(total_duration * pct)
+        clip_path = f"/tmp/det_{sample_id}_{int(pct*100)}.mp3"
+        try:
+            subprocess.run([
+                "ffmpeg", "-y", "-i", tmp_path,
+                "-ss", str(start), "-t", str(sample_len),
+                "-vn", "-ac", "1", "-ar", "16000",
+                "-c:a", "libmp3lame", "-q:a", "5",
+                clip_path,
+            ], check=True, capture_output=True, timeout=60)
+            with open(clip_path, "rb") as f:
+                tx = oa_client.audio.transcriptions.create(model="whisper-1", file=f)
+            samples.append({
+                "time_label":   f"{start // 60}:{start % 60:02d}",
+                "time_seconds": start,
+                "text":         tx.text[:400].strip(),
+            })
+        except Exception as e:
+            samples.append({
+                "time_label":   f"{start // 60}:{start % 60:02d}",
+                "time_seconds": start,
+                "text":         f"[sample unavailable: {e}]",
+            })
+        finally:
+            if os.path.exists(clip_path):
+                os.remove(clip_path)
+
+    total_mins   = int(total_duration // 60)
+    samples_text = "\n\n".join(
+        f"=== Sample at {s['time_label']} ({s['time_seconds']}s into recording) ===\n{s['text']}"
+        for s in samples
+    )
+
+    prompt = (
+        f"This is a church service recording that is {total_mins} minutes long.\n"
+        "I sampled the audio at 4 points. Based on the samples, identify where the SERMON "
+        "starts and ends.\n\n"
+        "The sermon is the extended biblical teaching by one primary speaker (typically 25-45 min).\n"
+        "It is usually preceded by: announcements, worship songs, offering.\n"
+        "It is usually followed by: closing prayer, final worship, or benediction.\n\n"
+        f"Samples:\n{samples_text}\n\n"
+        "Respond with ONLY valid JSON (no markdown):\n"
+        '{"start_seconds": 0, "end_seconds": 0, "confidence": "high|medium|low", '
+        '"reasoning": "brief explanation"}'
+    )
+
+    response = ant_client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=256,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return json.loads(response.content[0].text)
+
+
+def trim_audio(input_path: str, start_sec: int, end_sec: int, output_path: str) -> str:
+    """Trim audio to [start_sec, end_sec] and save as MP3."""
+    subprocess.run([
+        "ffmpeg", "-y", "-i", input_path,
+        "-ss", str(start_sec), "-to", str(end_sec),
+        "-vn", "-c:a", "libmp3lame", "-q:a", "4",
+        output_path,
+    ], check=True, capture_output=True, timeout=300)
+    return output_path
+
+
+def probe_url_duration(url: str) -> float:
+    """
+    Uses yt-dlp --dump-json to get video duration in seconds without downloading.
+    Returns 0.0 on failure or if the URL isn't a supported yt-dlp source.
+    """
+    try:
+        proxy = os.getenv("YTDLP_PROXY", "")
+        cmd   = ["yt-dlp", "--dump-json", "--no-warnings", "--no-playlist",
+                 "--socket-timeout", "20"]
+        if proxy:
+            cmd += ["--proxy", proxy]
+        cmd.append(url)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0 and result.stdout.strip():
+            info = json.loads(result.stdout.strip())
+            return float(info.get("duration") or 0)
+    except Exception:
+        pass
+    return 0.0
+
+
 # ── Background job ─────────────────────────────────────────────────────────────
 def process_sermon(name: str, source: str, email: str,
                    source_type: str, tmp_path: Optional[str] = None,
-                   job_id: Optional[str] = None):
+                   job_id: Optional[str] = None,
+                   start_sec: Optional[int] = None,
+                   end_sec: Optional[int] = None):
     """
     Runs in a background thread.
     1. Calls sermon_analyze.py as a subprocess (inherits env vars).
@@ -281,6 +408,8 @@ def process_sermon(name: str, source: str, email: str,
     3. Sends the PDF by email.
     4. Cleans up any uploaded temp file.
     5. Logs status at each stage to jobs.json.
+    start_sec / end_sec: optional trim window passed to sermon_analyze.py via
+    --start-sec / --end-sec (used when a URL submission was trimmed at confirm).
     """
     if job_id is None:
         job_id = str(uuid.uuid4())
@@ -304,6 +433,8 @@ def process_sermon(name: str, source: str, email: str,
     try:
         log_job(job_id, status="analyzing")
         cmd = [sys.executable, str(SCRIPT), source, "--name", name]
+        if start_sec is not None and end_sec is not None:
+            cmd += ["--start-sec", str(start_sec), "--end-sec", str(end_sec)]
         print(f"[job] Running: {' '.join(cmd)}")
 
         result = subprocess.run(
@@ -418,6 +549,33 @@ def submit():
         if not source:
             return render_template("index.html", error="Please enter a YouTube or podcast URL.")
 
+        # ── [SERMON_DETECTION] Probe URL duration before downloading ─────────
+        if os.getenv("SERMON_DETECTION", "").lower() == "true":
+            try:
+                duration = probe_url_duration(source)
+                if duration > SERMON_DETECTION_THRESHOLD_SECS:
+                    print(f"[detection] URL is {duration/60:.1f} min — redirecting to confirm")
+                    pending_id = str(uuid.uuid4())
+                    default_start = int(duration * 0.25)
+                    default_end   = int(duration * 0.85)
+                    pending = {
+                        "name":           name,
+                        "email":          email,
+                        "source_url":     source,
+                        "tmp_path":       None,
+                        "source_type":    "url",
+                        "mode":           "url",
+                        "total_duration": duration,
+                        "detected_start": default_start,
+                        "detected_end":   default_end,
+                    }
+                    with open(f"/tmp/pending_{pending_id}.json", "w") as _f:
+                        json.dump(pending, _f)
+                    return redirect(url_for("confirm_segment_get", pending_id=pending_id))
+            except Exception as _e:
+                print(f"[detection] URL duration probe failed ({_e}) — proceeding normally")
+        # ── End URL detection ─────────────────────────────────────────────────
+
     else:
         file = request.files.get("audio_file")
         if not file or not file.filename:
@@ -437,6 +595,37 @@ def submit():
         file.save(tmp_path)
         source = tmp_path
         print(f"[upload] Saved to {tmp_path}")
+
+    # ── [SERMON_DETECTION] Detect sermon segment for long file uploads ────────
+    # Gated by SERMON_DETECTION=true env var.
+    # To disable: remove that variable in Railway — no redeploy needed.
+    if (tmp_path
+            and os.getenv("SERMON_DETECTION", "").lower() == "true"
+            and source_type != "url"):
+        try:
+            duration = get_audio_duration(tmp_path)
+            if duration > SERMON_DETECTION_THRESHOLD_SECS:
+                print(f"[detection] File is {duration/60:.1f} min — running segment detection")
+                detected   = detect_sermon_segment(tmp_path, duration)
+                pending_id = str(uuid.uuid4())
+                pending    = {
+                    "name":           name,
+                    "email":          email,
+                    "tmp_path":       tmp_path,
+                    "source_type":    source_type,
+                    "total_duration": duration,
+                    "detected_start": detected["start_seconds"],
+                    "detected_end":   detected["end_seconds"],
+                    "confidence":     detected.get("confidence", "medium"),
+                    "reasoning":      detected.get("reasoning", ""),
+                }
+                with open(f"/tmp/pending_{pending_id}.json", "w") as _f:
+                    json.dump(pending, _f)
+                print(f"[detection] Redirecting to confirm — pending_id={pending_id[:8]}")
+                return redirect(url_for("confirm_segment_get", pending_id=pending_id))
+        except Exception as _det_err:
+            print(f"[detection] Detection failed ({_det_err}) — proceeding with full file")
+    # ── End sermon detection ──────────────────────────────────────────────────
 
     # ── Log the submission before launching the thread ────────────────────────
     # This ensures a record exists in jobs.json even if the server restarts
@@ -466,6 +655,114 @@ def submit():
     )
     thread.start()
 
+    return redirect(url_for("submitted"))
+
+
+@app.route("/confirm/<pending_id>", methods=["GET"])
+def confirm_segment_get(pending_id: str):
+    """Show the detected sermon segment for user review before running full analysis."""
+    pending_path = f"/tmp/pending_{pending_id}.json"
+    if not os.path.exists(pending_path):
+        return render_template("index.html",
+            error="This session expired or was already used. Please re-upload your file.")
+    with open(pending_path) as _f:
+        pending = json.load(_f)
+
+    def _fmt(secs: float) -> str:
+        return f"{int(secs) // 60}:{int(secs) % 60:02d}"
+
+    mode = pending.get("mode", "file")
+
+    return render_template("confirm.html",
+        pending_id          = pending_id,
+        mode                = mode,
+        name                = pending["name"],
+        total_duration_mins = int(pending["total_duration"] // 60),
+        detected_start      = int(pending["detected_start"]),
+        detected_end        = int(pending["detected_end"]),
+        detected_start_mmss = _fmt(pending["detected_start"]),
+        detected_end_mmss   = _fmt(pending["detected_end"]),
+        detected_dur_mins   = int((pending["detected_end"] - pending["detected_start"]) // 60),
+        confidence          = pending.get("confidence"),
+        reasoning           = pending.get("reasoning"),
+    )
+
+
+@app.route("/confirm/<pending_id>", methods=["POST"])
+def confirm_segment_post(pending_id: str):
+    """Trim audio to confirmed window and launch full analysis."""
+    pending_path = f"/tmp/pending_{pending_id}.json"
+    if not os.path.exists(pending_path):
+        return render_template("index.html",
+            error="This session expired or was already used. Please re-upload your file.")
+    with open(pending_path) as _f:
+        pending = json.load(_f)
+    os.remove(pending_path)
+
+    name        = pending["name"]
+    email       = pending["email"]
+    source_type = pending["source_type"]
+    mode        = pending.get("mode", "file")
+    use_full    = request.form.get("use_full", "false") == "true"
+
+    start_sec = None
+    end_sec   = None
+    tmp_path  = None
+
+    if mode == "url":
+        # URL submission — trimming happens inside sermon_analyze.py via --start-sec/--end-sec
+        source = pending["source_url"]
+        if not use_full:
+            start_sec = int(request.form.get("start_seconds", pending["detected_start"]))
+            end_sec   = int(request.form.get("end_seconds",   pending["detected_end"]))
+            print(f"[confirm] URL {name!r}: will trim {start_sec}s–{end_sec}s during download")
+        else:
+            print(f"[confirm] URL {name!r}: using full recording")
+    else:
+        # File upload — trim the local file now, before handing to subprocess
+        orig_path = pending["tmp_path"]
+        if use_full:
+            source   = orig_path
+            tmp_path = orig_path
+            print(f"[confirm] {name!r} chose full recording")
+        else:
+            start_sec_req = int(request.form.get("start_seconds", pending["detected_start"]))
+            end_sec_req   = int(request.form.get("end_seconds",   pending["detected_end"]))
+            trimmed = f"/tmp/trimmed_{pending_id}.mp3"
+            try:
+                trim_audio(orig_path, start_sec_req, end_sec_req, trimmed)
+                if os.path.exists(orig_path):
+                    os.remove(orig_path)
+                source   = trimmed
+                tmp_path = trimmed
+                print(f"[confirm] Trimmed {name!r}: {start_sec_req}s–{end_sec_req}s → {trimmed}")
+            except Exception as _e:
+                print(f"[confirm] Trim failed ({_e}) — using full file")
+                source   = orig_path
+                tmp_path = orig_path
+
+    job_id = str(uuid.uuid4())
+    log_job(job_id,
+        timestamp     = datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        preacher_name = name,
+        email         = _mask_email(email),
+        source_type   = source_type,
+        status        = "queued",
+        pdf_name      = None,
+        error_msg     = None,
+        duration_sec  = None,
+    )
+    print(f"[confirm] Queued job {job_id[:8]}  preacher={name!r}  email={email!r}")
+
+    if "@" in email:
+        send_confirmation_email(email, name)
+
+    thread = threading.Thread(
+        target=process_sermon,
+        args=(name, source, email, source_type, tmp_path, job_id, start_sec, end_sec),
+        daemon=True,
+    )
+    thread.start()
     return redirect(url_for("submitted"))
 
 
