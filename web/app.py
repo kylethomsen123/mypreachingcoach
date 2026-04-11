@@ -291,76 +291,144 @@ def get_audio_duration(path: str) -> float:
         return 0.0
 
 
-def detect_sermon_segment(tmp_path: str, total_duration: float) -> dict:
+def detect_sermon_with_diarization(audio_path: str, total_duration: float) -> dict:
     """
-    Samples the audio at 4 points, transcribes each 90-second clip with
-    Whisper, then asks Claude to identify the sermon start/end.
-    Runs synchronously — typically takes ~30 seconds, well within timeout.
+    Uses AssemblyAI speaker diarization to find the sermon window.
+    Uploads audio, gets speaker-labeled utterances, then finds the longest
+    contiguous block by the dominant speaker (the preacher).
+    Only called for recordings longer than SERMON_DETECTION_THRESHOLD_SECS.
     """
-    import openai as _openai
-    import anthropic as _anthropic
+    import assemblyai as aai
 
-    oa_client  = _openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
-    ant_client = _anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+    aai.settings.api_key = os.getenv("ASSEMBLYAI_API_KEY", "")
 
-    sample_len  = 90          # seconds per clip
-    sample_pcts = [0.10, 0.30, 0.55, 0.80]
-    sample_id   = str(uuid.uuid4().hex)[:10]
-    samples     = []
-
-    for pct in sample_pcts:
-        start     = int(total_duration * pct)
-        clip_path = f"/tmp/det_{sample_id}_{int(pct*100)}.mp3"
-        try:
-            subprocess.run([
-                "ffmpeg", "-y", "-i", tmp_path,
-                "-ss", str(start), "-t", str(sample_len),
-                "-vn", "-ac", "1", "-ar", "16000",
-                "-c:a", "libmp3lame", "-q:a", "5",
-                clip_path,
-            ], check=True, capture_output=True, timeout=60)
-            with open(clip_path, "rb") as f:
-                tx = oa_client.audio.transcriptions.create(model="whisper-1", file=f)
-            samples.append({
-                "time_label":   f"{start // 60}:{start % 60:02d}",
-                "time_seconds": start,
-                "text":         tx.text[:400].strip(),
-            })
-        except Exception as e:
-            samples.append({
-                "time_label":   f"{start // 60}:{start % 60:02d}",
-                "time_seconds": start,
-                "text":         f"[sample unavailable: {e}]",
-            })
-        finally:
-            if os.path.exists(clip_path):
-                os.remove(clip_path)
-
-    total_mins   = int(total_duration // 60)
-    samples_text = "\n\n".join(
-        f"=== Sample at {s['time_label']} ({s['time_seconds']}s into recording) ===\n{s['text']}"
-        for s in samples
+    transcriber = aai.Transcriber()
+    transcript  = transcriber.transcribe(
+        audio_path,
+        aai.TranscriptionConfig(speaker_labels=True),
     )
 
-    prompt = (
-        f"This is a church service recording that is {total_mins} minutes long.\n"
-        "I sampled the audio at 4 points. Based on the samples, identify where the SERMON "
-        "starts and ends.\n\n"
-        "The sermon is the extended biblical teaching by one primary speaker (typically 25-45 min).\n"
-        "It is usually preceded by: announcements, worship songs, offering.\n"
-        "It is usually followed by: closing prayer, final worship, or benediction.\n\n"
-        f"Samples:\n{samples_text}\n\n"
-        "Respond with ONLY valid JSON (no markdown):\n"
-        '{"start_seconds": 0, "end_seconds": 0, "confidence": "high|medium|low", '
-        '"reasoning": "brief explanation"}'
+    if transcript.status == aai.TranscriptStatus.error:
+        raise RuntimeError(f"AssemblyAI error: {transcript.error}")
+
+    utterances = transcript.utterances or []
+    if not utterances:
+        raise RuntimeError("AssemblyAI returned no utterances")
+
+    # Total speaking time per speaker (ms → seconds)
+    speaker_time: dict[str, float] = {}
+    for u in utterances:
+        dur = (u.end - u.start) / 1000.0
+        speaker_time[u.speaker] = speaker_time.get(u.speaker, 0) + dur
+
+    # Preacher = speaker with the most total speaking time
+    main_speaker      = max(speaker_time, key=speaker_time.get)
+    main_speaker_mins = speaker_time[main_speaker] / 60
+
+    # Collect all segments for the main speaker
+    main_segs = sorted(
+        [(u.start / 1000.0, u.end / 1000.0)
+         for u in utterances if u.speaker == main_speaker]
     )
 
-    response = ant_client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=256,
-        messages=[{"role": "user", "content": prompt}],
+    # Merge segments separated by less than 3 minutes
+    # (allows for brief prayers, responses, or worship between sermon sections)
+    MAX_GAP_SEC = 180
+    merged: list[list[float]] = []
+    for start, end in main_segs:
+        if merged and (start - merged[-1][1]) <= MAX_GAP_SEC:
+            merged[-1][1] = end
+        else:
+            merged.append([start, end])
+
+    # Longest merged block = the sermon
+    sermon_start, sermon_end = max(merged, key=lambda x: x[1] - x[0])
+    sermon_mins = (sermon_end - sermon_start) / 60
+
+    confidence = "high" if sermon_mins >= 20 else "medium"
+    reasoning  = (
+        f"Speaker {main_speaker} had the most speaking time "
+        f"({main_speaker_mins:.0f} min total). "
+        f"Longest block: {int(sermon_start)//60}:{int(sermon_start)%60:02d} – "
+        f"{int(sermon_end)//60}:{int(sermon_end)%60:02d} "
+        f"({sermon_mins:.0f} min)."
     )
-    return json.loads(response.content[0].text)
+
+    return {
+        "start_seconds": int(sermon_start),
+        "end_seconds":   int(sermon_end),
+        "confidence":    confidence,
+        "reasoning":     reasoning,
+    }
+
+
+def run_detection_background(pending_id: str) -> None:
+    """
+    Background thread: downloads audio if needed (URL submissions), runs
+    AssemblyAI diarization, updates pending JSON with the detected window.
+    Falls back to percentage defaults if anything fails so the user always
+    reaches the confirm page.
+    """
+    pending_path = f"/tmp/pending_{pending_id}.json"
+    try:
+        with open(pending_path) as _f:
+            pending = json.load(_f)
+    except Exception as e:
+        print(f"[detection] Could not read pending JSON: {e}")
+        return
+
+    total_duration = pending["total_duration"]
+    audio_path     = pending.get("tmp_path")
+
+    try:
+        # ── Download audio for URL submissions ───────────────────────────────
+        if pending.get("mode") == "url" and not audio_path:
+            import tempfile as _tf
+            tmpdir = _tf.mkdtemp(prefix="detection_")
+            url    = pending["source_url"]
+            print(f"[detection] Downloading for diarization: {url}")
+            proxy = os.getenv("YTDLP_PROXY", "")
+            cmd   = ["yt-dlp", "-x", "--audio-format", "mp3",
+                     "--no-playlist", "--retries", "3",
+                     "-o", os.path.join(tmpdir, "%(title)s.%(ext)s"), url]
+            if proxy:
+                cmd += ["--proxy", proxy]
+            subprocess.run(cmd, check=True, capture_output=True, timeout=600)
+            mp3s = list(Path(tmpdir).glob("*.mp3"))
+            if not mp3s:
+                raise RuntimeError("yt-dlp produced no mp3")
+            audio_path = str(mp3s[0])
+            pending["tmp_path"] = audio_path   # store so confirm POST can use it
+
+        # ── Run AssemblyAI diarization ────────────────────────────────────────
+        print(f"[detection] Running AssemblyAI diarization on {audio_path}")
+        detected = detect_sermon_with_diarization(audio_path, total_duration)
+        pending.update({
+            "status":         "ready",
+            "detected_start": detected["start_seconds"],
+            "detected_end":   detected["end_seconds"],
+            "confidence":     detected["confidence"],
+            "reasoning":      detected["reasoning"],
+            "tmp_path":       audio_path,
+        })
+        print(f"[detection] Sermon detected: "
+              f"{detected['start_seconds']//60}:{detected['start_seconds']%60:02d} – "
+              f"{detected['end_seconds']//60}:{detected['end_seconds']%60:02d} "
+              f"({detected['confidence']} confidence)")
+
+    except Exception as e:
+        print(f"[detection] AssemblyAI failed ({e}) — falling back to percentage defaults")
+        pending.update({
+            "status":         "ready",
+            "detected_start": int(total_duration * 0.40),
+            "detected_end":   int(total_duration * 0.90),
+            "confidence":     "low",
+            "reasoning":      "Auto-detection unavailable — using estimate. Please adjust if needed.",
+            "tmp_path":       audio_path,
+        })
+
+    with open(pending_path, "w") as _f:
+        json.dump(pending, _f)
 
 
 def trim_audio(input_path: str, start_sec: int, end_sec: int, output_path: str) -> str:
@@ -549,16 +617,14 @@ def submit():
         if not source:
             return render_template("index.html", error="Please enter a YouTube or podcast URL.")
 
-        # ── [SERMON_DETECTION] Probe URL duration before downloading ─────────
+        # ── [SERMON_DETECTION] Probe URL duration, launch async detection ───
         if os.getenv("SERMON_DETECTION", "").lower() == "true":
             try:
                 duration = probe_url_duration(source)
                 if duration > SERMON_DETECTION_THRESHOLD_SECS:
-                    print(f"[detection] URL is {duration/60:.1f} min — redirecting to confirm")
+                    print(f"[detection] URL is {duration/60:.1f} min — launching diarization")
                     pending_id = str(uuid.uuid4())
-                    default_start = int(duration * 0.40)  # sermons typically start 35-45% in
-                    default_end   = int(duration * 0.90)  # end near the close of the service
-                    pending = {
+                    pending    = {
                         "name":           name,
                         "email":          email,
                         "source_url":     source,
@@ -566,12 +632,19 @@ def submit():
                         "source_type":    "url",
                         "mode":           "url",
                         "total_duration": duration,
-                        "detected_start": default_start,
-                        "detected_end":   default_end,
+                        "status":         "detecting",
+                        "detected_start": None,
+                        "detected_end":   None,
+                        "confidence":     None,
+                        "reasoning":      None,
                     }
                     with open(f"/tmp/pending_{pending_id}.json", "w") as _f:
                         json.dump(pending, _f)
-                    return redirect(url_for("confirm_segment_get", pending_id=pending_id))
+                    threading.Thread(
+                        target=run_detection_background,
+                        args=(pending_id,), daemon=True,
+                    ).start()
+                    return redirect(url_for("detecting_page", pending_id=pending_id))
             except Exception as _e:
                 print(f"[detection] URL duration probe failed ({_e}) — proceeding normally")
         # ── End URL detection ─────────────────────────────────────────────────
@@ -605,26 +678,30 @@ def submit():
         try:
             duration = get_audio_duration(tmp_path)
             if duration > SERMON_DETECTION_THRESHOLD_SECS:
-                print(f"[detection] File is {duration/60:.1f} min — running segment detection")
-                detected   = detect_sermon_segment(tmp_path, duration)
+                print(f"[detection] File is {duration/60:.1f} min — launching diarization")
                 pending_id = str(uuid.uuid4())
                 pending    = {
                     "name":           name,
                     "email":          email,
                     "tmp_path":       tmp_path,
                     "source_type":    source_type,
+                    "mode":           "file",
                     "total_duration": duration,
-                    "detected_start": detected["start_seconds"],
-                    "detected_end":   detected["end_seconds"],
-                    "confidence":     detected.get("confidence", "medium"),
-                    "reasoning":      detected.get("reasoning", ""),
+                    "status":         "detecting",
+                    "detected_start": None,
+                    "detected_end":   None,
+                    "confidence":     None,
+                    "reasoning":      None,
                 }
                 with open(f"/tmp/pending_{pending_id}.json", "w") as _f:
                     json.dump(pending, _f)
-                print(f"[detection] Redirecting to confirm — pending_id={pending_id[:8]}")
-                return redirect(url_for("confirm_segment_get", pending_id=pending_id))
+                threading.Thread(
+                    target=run_detection_background,
+                    args=(pending_id,), daemon=True,
+                ).start()
+                return redirect(url_for("detecting_page", pending_id=pending_id))
         except Exception as _det_err:
-            print(f"[detection] Detection failed ({_det_err}) — proceeding with full file")
+            print(f"[detection] Failed to start detection ({_det_err}) — proceeding normally")
     # ── End sermon detection ──────────────────────────────────────────────────
 
     # ── Log the submission before launching the thread ────────────────────────
@@ -688,6 +765,28 @@ def confirm_segment_get(pending_id: str):
     )
 
 
+@app.route("/detecting/<pending_id>")
+def detecting_page(pending_id: str):
+    """Waiting page shown while AssemblyAI diarization runs in the background."""
+    if not os.path.exists(f"/tmp/pending_{pending_id}.json"):
+        return render_template("index.html", error="Session expired. Please resubmit.")
+    return render_template("detecting.html", pending_id=pending_id)
+
+
+@app.route("/detecting-status/<pending_id>")
+def detecting_status(pending_id: str):
+    """JSON endpoint polled by detecting.html every 3 seconds."""
+    pending_path = f"/tmp/pending_{pending_id}.json"
+    if not os.path.exists(pending_path):
+        return {"status": "expired"}
+    try:
+        with open(pending_path) as _f:
+            pending = json.load(_f)
+        return {"status": pending.get("status", "detecting")}
+    except Exception:
+        return {"status": "detecting"}
+
+
 @app.route("/confirm/<pending_id>", methods=["POST"])
 def confirm_segment_post(pending_id: str):
     """Trim audio to confirmed window and launch full analysis."""
@@ -702,44 +801,45 @@ def confirm_segment_post(pending_id: str):
     name        = pending["name"]
     email       = pending["email"]
     source_type = pending["source_type"]
-    mode        = pending.get("mode", "file")
     use_full    = request.form.get("use_full", "false") == "true"
+    orig_path   = pending.get("tmp_path")
 
-    start_sec = None
-    end_sec   = None
-    tmp_path  = None
-
-    if mode == "url":
-        # URL submission — trimming happens inside sermon_analyze.py via --start-sec/--end-sec
-        source = pending["source_url"]
-        if not use_full:
-            start_sec = int(request.form.get("start_seconds", pending["detected_start"]))
-            end_sec   = int(request.form.get("end_seconds",   pending["detected_end"]))
-            print(f"[confirm] URL {name!r}: will trim {start_sec}s–{end_sec}s during download")
-        else:
-            print(f"[confirm] URL {name!r}: using full recording")
+    # By the time we reach confirm, audio is always on disk:
+    # - file uploads: saved during /submit
+    # - URL submissions: downloaded during background detection
+    # In both cases, trim the file directly here.
+    if not orig_path or not os.path.exists(orig_path):
+        # Fallback: audio missing (detection download failed) — pass URL with time args
+        source    = pending.get("source_url", orig_path)
+        tmp_path  = None
+        start_sec = None if use_full else int(request.form.get("start_seconds", pending.get("detected_start", 0)))
+        end_sec   = None if use_full else int(request.form.get("end_seconds",   pending.get("detected_end", 0)))
+        print(f"[confirm] No local file for {name!r} — passing URL with --start-sec/--end-sec")
+    elif use_full:
+        source    = orig_path
+        tmp_path  = orig_path
+        start_sec = None
+        end_sec   = None
+        print(f"[confirm] {name!r} chose full recording")
     else:
-        # File upload — trim the local file now, before handing to subprocess
-        orig_path = pending["tmp_path"]
-        if use_full:
-            source   = orig_path
-            tmp_path = orig_path
-            print(f"[confirm] {name!r} chose full recording")
-        else:
-            start_sec_req = int(request.form.get("start_seconds", pending["detected_start"]))
-            end_sec_req   = int(request.form.get("end_seconds",   pending["detected_end"]))
-            trimmed = f"/tmp/trimmed_{pending_id}.mp3"
-            try:
-                trim_audio(orig_path, start_sec_req, end_sec_req, trimmed)
-                if os.path.exists(orig_path):
-                    os.remove(orig_path)
-                source   = trimmed
-                tmp_path = trimmed
-                print(f"[confirm] Trimmed {name!r}: {start_sec_req}s–{end_sec_req}s → {trimmed}")
-            except Exception as _e:
-                print(f"[confirm] Trim failed ({_e}) — using full file")
-                source   = orig_path
-                tmp_path = orig_path
+        start_sec_req = int(request.form.get("start_seconds", pending["detected_start"]))
+        end_sec_req   = int(request.form.get("end_seconds",   pending["detected_end"]))
+        trimmed = f"/tmp/trimmed_{pending_id}.mp3"
+        try:
+            trim_audio(orig_path, start_sec_req, end_sec_req, trimmed)
+            if os.path.exists(orig_path):
+                os.remove(orig_path)
+            source    = trimmed
+            tmp_path  = trimmed
+            start_sec = None
+            end_sec   = None
+            print(f"[confirm] Trimmed {name!r}: {start_sec_req}s–{end_sec_req}s → {trimmed}")
+        except Exception as _e:
+            print(f"[confirm] Trim failed ({_e}) — using full file")
+            source    = orig_path
+            tmp_path  = orig_path
+            start_sec = None
+            end_sec   = None
 
     job_id = str(uuid.uuid4())
     log_job(job_id,

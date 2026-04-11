@@ -10,3 +10,4 @@ scipy
 fpdf2
 yt-dlp>=2025.1.1
 PySocks
+assemblyai
