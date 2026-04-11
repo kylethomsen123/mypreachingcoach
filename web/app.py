@@ -568,6 +568,27 @@ def trim_audio(input_path: str, start_sec: int, end_sec: int, output_path: str) 
     return output_path
 
 
+def normalize_youtube_url(url: str) -> str:
+    """
+    Converts YouTube Live URLs to standard watch URLs so yt-dlp isn't blocked.
+    youtube.com/live/VIDEO_ID  →  youtube.com/watch?v=VIDEO_ID
+    Also strips tracking parameters (?si=...) that can trigger bot detection.
+    Non-YouTube URLs are returned unchanged.
+    """
+    import re as _re
+    # Convert /live/ID to /watch?v=ID
+    url = _re.sub(
+        r'https?://(?:www\.)?youtube\.com/live/([A-Za-z0-9_-]+)',
+        r'https://www.youtube.com/watch?v=\1',
+        url,
+    )
+    # Strip ?si= tracking parameter (keep other params like t= for timestamps)
+    url = _re.sub(r'[?&]si=[A-Za-z0-9_-]+', lambda m: '' if m.group(0).startswith('?') else '', url)
+    # Clean up any trailing ? or &
+    url = url.rstrip('?&')
+    return url
+
+
 def probe_url_duration(url: str) -> float:
     """
     Uses yt-dlp --dump-json to get video duration in seconds without downloading.
@@ -739,7 +760,7 @@ def submit():
     source   = None
 
     if source_type == "url":
-        source = request.form.get("url", "").strip()
+        source = normalize_youtube_url(request.form.get("url", "").strip())
         if not source:
             return render_template("index.html", error="Please enter a YouTube or podcast URL.")
 
