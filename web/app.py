@@ -556,8 +556,8 @@ def submit():
                 if duration > SERMON_DETECTION_THRESHOLD_SECS:
                     print(f"[detection] URL is {duration/60:.1f} min — redirecting to confirm")
                     pending_id = str(uuid.uuid4())
-                    default_start = int(duration * 0.25)
-                    default_end   = int(duration * 0.85)
+                    default_start = int(duration * 0.40)  # sermons typically start 35-45% in
+                    default_end   = int(duration * 0.90)  # end near the close of the service
                     pending = {
                         "name":           name,
                         "email":          email,
