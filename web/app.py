@@ -293,51 +293,81 @@ def get_audio_duration(path: str) -> float:
 
 def detect_sermon_with_diarization(audio_path: str, total_duration: float) -> dict:
     """
-    Uses AssemblyAI speaker diarization to find the sermon window.
-    Uploads audio, gets speaker-labeled utterances, then finds the longest
-    contiguous block by the dominant speaker (the preacher).
-    Only called for recordings longer than SERMON_DETECTION_THRESHOLD_SECS.
+    Uses AssemblyAI REST API directly (no SDK) for speaker diarization.
+    Avoids SDK version compatibility issues with speech_model/speech_models.
+    Finds the longest contiguous speaking block by the dominant speaker = sermon.
     """
-    import assemblyai as aai
+    import httpx as _httpx
+    import time  as _time
 
-    aai.settings.api_key = os.getenv("ASSEMBLYAI_API_KEY", "")
+    api_key  = os.getenv("ASSEMBLYAI_API_KEY", "")
+    base     = "https://api.assemblyai.com"
+    auth     = {"authorization": api_key}
 
-    transcriber = aai.Transcriber()
-    transcript  = transcriber.transcribe(
-        audio_path,
-        aai.TranscriptionConfig(
-            speaker_labels=True,
-            speech_model=aai.SpeechModel.best,
-        ),
+    # ── 1. Upload audio ───────────────────────────────────────────────────────
+    file_mb = os.path.getsize(audio_path) / 1e6
+    print(f"[assemblyai] Uploading {file_mb:.1f} MB ...")
+    with open(audio_path, "rb") as _f:
+        resp = _httpx.post(f"{base}/v2/upload", headers=auth, content=_f, timeout=300)
+    resp.raise_for_status()
+    upload_url = resp.json()["upload_url"]
+
+    # ── 2. Request transcription with speaker diarization ─────────────────────
+    resp = _httpx.post(
+        f"{base}/v2/transcript",
+        headers={**auth, "content-type": "application/json"},
+        json={
+            "audio_url":     upload_url,
+            "speaker_labels": True,
+            "speech_models": ["universal-2"],   # REST API param (plural, list)
+        },
+        timeout=30,
     )
+    resp.raise_for_status()
+    transcript_id = resp.json()["id"]
+    print(f"[assemblyai] Transcription queued: {transcript_id}")
 
-    if transcript.status == aai.TranscriptStatus.error:
-        raise RuntimeError(f"AssemblyAI error: {transcript.error}")
+    # ── 3. Poll until complete (max 40 min) ───────────────────────────────────
+    poll_url = f"{base}/v2/transcript/{transcript_id}"
+    for attempt in range(120):
+        _time.sleep(20)
+        resp   = _httpx.get(poll_url, headers=auth, timeout=30)
+        resp.raise_for_status()
+        result = resp.json()
+        status = result["status"]
+        if status == "completed":
+            break
+        if status == "error":
+            raise RuntimeError(f"AssemblyAI transcription error: {result.get('error')}")
+        if attempt % 3 == 0:
+            print(f"[assemblyai] Status: {status} ({attempt * 20}s elapsed)")
+    else:
+        raise RuntimeError("AssemblyAI timed out after 40 minutes")
 
-    utterances = transcript.utterances or []
+    # ── 4. Find sermon window from utterances ─────────────────────────────────
+    utterances = result.get("utterances") or []
     if not utterances:
         raise RuntimeError("AssemblyAI returned no utterances")
 
     # Total speaking time per speaker (ms → seconds)
-    speaker_time: dict[str, float] = {}
+    speaker_time: dict = {}
     for u in utterances:
-        dur = (u.end - u.start) / 1000.0
-        speaker_time[u.speaker] = speaker_time.get(u.speaker, 0) + dur
+        spk = u["speaker"]
+        speaker_time[spk] = speaker_time.get(spk, 0) + (u["end"] - u["start"]) / 1000.0
 
-    # Preacher = speaker with the most total speaking time
+    # Preacher = speaker with the most total time
     main_speaker      = max(speaker_time, key=speaker_time.get)
     main_speaker_mins = speaker_time[main_speaker] / 60
 
-    # Collect all segments for the main speaker
+    # Collect segments for main speaker
     main_segs = sorted(
-        [(u.start / 1000.0, u.end / 1000.0)
-         for u in utterances if u.speaker == main_speaker]
+        [(u["start"] / 1000.0, u["end"] / 1000.0)
+         for u in utterances if u["speaker"] == main_speaker]
     )
 
-    # Merge segments separated by less than 3 minutes
-    # (allows for brief prayers, responses, or worship between sermon sections)
+    # Merge gaps ≤ 3 min (brief prayers, responses, or worship between sermon sections)
     MAX_GAP_SEC = 180
-    merged: list[list[float]] = []
+    merged: list = []
     for start, end in main_segs:
         if merged and (start - merged[-1][1]) <= MAX_GAP_SEC:
             merged[-1][1] = end
@@ -352,7 +382,7 @@ def detect_sermon_with_diarization(audio_path: str, total_duration: float) -> di
     reasoning  = (
         f"Speaker {main_speaker} had the most speaking time "
         f"({main_speaker_mins:.0f} min total). "
-        f"Longest block: {int(sermon_start)//60}:{int(sermon_start)%60:02d} – "
+        f"Longest block: {int(sermon_start)//60}:{int(sermon_start)%60:02d}\u2013"
         f"{int(sermon_end)//60}:{int(sermon_end)%60:02d} "
         f"({sermon_mins:.0f} min)."
     )
