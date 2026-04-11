@@ -293,9 +293,12 @@ def get_audio_duration(path: str) -> float:
 
 def detect_sermon_with_diarization(audio_path: str, total_duration: float) -> dict:
     """
-    Uses AssemblyAI REST API directly (no SDK) for speaker diarization.
-    Avoids SDK version compatibility issues with speech_model/speech_models.
-    Finds the longest contiguous speaking block by the dominant speaker = sermon.
+    Two-stage sermon detection:
+    1. AssemblyAI speaker diarization — builds contiguous blocks for ALL speakers
+       using a 7-minute merge gap (accounts for worship/prayer between sermon sections).
+    2. Claude sanity check — picks the most likely sermon block using common sense
+       about church service structure (duration, position, etc.).
+    Falls back gracefully if either stage fails.
     """
     import httpx as _httpx
     import time  as _time
@@ -317,9 +320,9 @@ def detect_sermon_with_diarization(audio_path: str, total_duration: float) -> di
         f"{base}/v2/transcript",
         headers={**auth, "content-type": "application/json"},
         json={
-            "audio_url":     upload_url,
+            "audio_url":      upload_url,
             "speaker_labels": True,
-            "speech_models": ["universal-2"],   # REST API param (plural, list)
+            "speech_models":  ["universal-2"],
         },
         timeout=30,
     )
@@ -344,54 +347,144 @@ def detect_sermon_with_diarization(audio_path: str, total_duration: float) -> di
     else:
         raise RuntimeError("AssemblyAI timed out after 40 minutes")
 
-    # ── 4. Find sermon window from utterances ─────────────────────────────────
+    # ── 4. Build contiguous blocks for every speaker ──────────────────────────
     utterances = result.get("utterances") or []
     if not utterances:
         raise RuntimeError("AssemblyAI returned no utterances")
 
-    # Total speaking time per speaker (ms → seconds)
+    # Accumulate segments and total time per speaker
+    speaker_segs: dict = {}
     speaker_time: dict = {}
     for u in utterances:
-        spk = u["speaker"]
-        speaker_time[spk] = speaker_time.get(spk, 0) + (u["end"] - u["start"]) / 1000.0
+        spk   = u["speaker"]
+        start = u["start"] / 1000.0
+        end   = u["end"]   / 1000.0
+        speaker_time[spk] = speaker_time.get(spk, 0) + (end - start)
+        speaker_segs.setdefault(spk, []).append([start, end])
 
-    # Preacher = speaker with the most total time
-    main_speaker      = max(speaker_time, key=speaker_time.get)
-    main_speaker_mins = speaker_time[main_speaker] / 60
+    # Merge each speaker's segments with a 7-minute gap.
+    # Larger gap than before (was 3 min) so mid-sermon worship/prayer doesn't
+    # split the preacher's block into two fragments.
+    MAX_GAP_SEC = 420   # 7 minutes
+    all_blocks: list = []
+    for spk, segs in speaker_segs.items():
+        segs = sorted(segs)
+        merged: list = []
+        for start, end in segs:
+            if merged and (start - merged[-1][1]) <= MAX_GAP_SEC:
+                merged[-1][1] = end
+            else:
+                merged.append([start, end])
+        for seg in merged:
+            dur = seg[1] - seg[0]
+            all_blocks.append({
+                "speaker":           spk,
+                "start":             seg[0],
+                "end":               seg[1],
+                "duration_min":      dur / 60,
+                "start_pct":         seg[0] / total_duration * 100,
+                "speaker_total_min": speaker_time[spk] / 60,
+            })
 
-    # Collect segments for main speaker
-    main_segs = sorted(
-        [(u["start"] / 1000.0, u["end"] / 1000.0)
-         for u in utterances if u["speaker"] == main_speaker]
+    # Sort by block duration descending so index 0 = longest block
+    all_blocks.sort(key=lambda x: x["duration_min"], reverse=True)
+
+    for b in all_blocks:
+        print(f"[detection] Block: Speaker {b['speaker']}  "
+              f"{int(b['start'])//60}:{int(b['start'])%60:02d}–"
+              f"{int(b['end'])//60}:{int(b['end'])%60:02d}  "
+              f"({b['duration_min']:.0f} min, starts at {b['start_pct']:.0f}%)")
+
+    # ── 5. Claude picks the most likely sermon block ──────────────────────────
+    return _claude_pick_sermon(all_blocks, total_duration)
+
+
+def _claude_pick_sermon(all_blocks: list, total_duration: float) -> dict:
+    """
+    Asks Claude to identify which diarization block is most likely the sermon.
+    Applies common sense about church service structure:
+    - Sermons are typically 25–50 min long
+    - Sermons start after worship/announcements (usually 20–70% through service)
+    - A 12-min block in a 95-min service is almost certainly not the sermon
+    Falls back to longest valid block (≥20 min, starts ≥15%) if Claude fails.
+    """
+    import anthropic as _anthropic
+
+    def _fmt(secs: float) -> str:
+        return f"{int(secs)//60}:{int(secs)%60:02d}"
+
+    total_mins = total_duration / 60
+
+    # Summarise top 10 blocks for Claude
+    lines = []
+    for i, b in enumerate(all_blocks[:10]):
+        lines.append(
+            f"  [{i}] Speaker {b['speaker']}: {_fmt(b['start'])}–{_fmt(b['end'])}"
+            f"  ({b['duration_min']:.0f} min, starts {b['start_pct']:.0f}% through service,"
+            f" speaker's total mic time: {b['speaker_total_min']:.0f} min)"
+        )
+
+    prompt = (
+        f"A church service recording is {total_mins:.0f} minutes long. "
+        f"Speaker diarization found these contiguous speaking blocks "
+        f"(sorted longest first):\n\n"
+        + "\n".join(lines) +
+        "\n\nTypical church service patterns:\n"
+        "- The sermon is 25–50 minutes of continuous teaching by one person\n"
+        "- It starts after worship and announcements — usually 20–70% through the service\n"
+        "- Blocks under 20 minutes are almost never the full sermon\n"
+        "- The preacher may have the most total mic time, but not always\n\n"
+        "Which block index is most likely the sermon? Reply in exactly this format:\n"
+        "INDEX: [number]\n"
+        "CONFIDENCE: [high/medium/low]\n"
+        "REASON: [one sentence explaining your choice]"
     )
 
-    # Merge gaps ≤ 3 min (brief prayers, responses, or worship between sermon sections)
-    MAX_GAP_SEC = 180
-    merged: list = []
-    for start, end in main_segs:
-        if merged and (start - merged[-1][1]) <= MAX_GAP_SEC:
-            merged[-1][1] = end
-        else:
-            merged.append([start, end])
+    try:
+        client   = _anthropic.Anthropic()
+        response = client.messages.create(
+            model     = "claude-haiku-4-5-20251001",
+            max_tokens= 120,
+            messages  = [{"role": "user", "content": prompt}],
+        )
+        text = response.content[0].text.strip()
+        print(f"[claude] Sermon block selection:\n{text}")
 
-    # Longest merged block = the sermon
-    sermon_start, sermon_end = max(merged, key=lambda x: x[1] - x[0])
-    sermon_mins = (sermon_end - sermon_start) / 60
+        parsed = {}
+        for line in text.splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                parsed[k.strip().upper()] = v.strip()
 
-    confidence = "high" if sermon_mins >= 20 else "medium"
-    reasoning  = (
-        f"Speaker {main_speaker} had the most speaking time "
-        f"({main_speaker_mins:.0f} min total). "
-        f"Longest block: {int(sermon_start)//60}:{int(sermon_start)%60:02d}\u2013"
-        f"{int(sermon_end)//60}:{int(sermon_end)%60:02d} "
-        f"({sermon_mins:.0f} min)."
-    )
+        idx = int(parsed.get("INDEX", "0"))
+        if 0 <= idx < len(all_blocks):
+            b = all_blocks[idx]
+            return {
+                "start_seconds": int(b["start"]),
+                "end_seconds":   int(b["end"]),
+                "confidence":    parsed.get("CONFIDENCE", "medium").lower(),
+                "reasoning":     parsed.get("REASON", ""),
+            }
+    except Exception as e:
+        print(f"[claude] Sermon selection failed ({e}) — falling back to heuristic")
 
+    # Fallback: longest block ≥20 min that starts at least 15% through the service
+    for b in all_blocks:
+        if b["duration_min"] >= 20 and b["start_pct"] >= 15:
+            return {
+                "start_seconds": int(b["start"]),
+                "end_seconds":   int(b["end"]),
+                "confidence":    "medium",
+                "reasoning":     "Longest speaking block meeting minimum sermon duration.",
+            }
+
+    # Last resort: longest block overall
+    b = all_blocks[0]
     return {
-        "start_seconds": int(sermon_start),
-        "end_seconds":   int(sermon_end),
-        "confidence":    confidence,
-        "reasoning":     reasoning,
+        "start_seconds": int(b["start"]),
+        "end_seconds":   int(b["end"]),
+        "confidence":    "low",
+        "reasoning":     "Could not confidently identify sermon — please adjust times.",
     }
 
 
