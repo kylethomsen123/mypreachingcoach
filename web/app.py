@@ -305,7 +305,10 @@ def detect_sermon_with_diarization(audio_path: str, total_duration: float) -> di
     transcriber = aai.Transcriber()
     transcript  = transcriber.transcribe(
         audio_path,
-        aai.TranscriptionConfig(speaker_labels=True),
+        aai.TranscriptionConfig(
+            speaker_labels=True,
+            speech_model=aai.SpeechModel.best,
+        ),
     )
 
     if transcript.status == aai.TranscriptStatus.error:
