@@ -542,6 +542,43 @@ def run_detection_background(pending_id: str) -> None:
               f"{detected['end_seconds']//60}:{detected['end_seconds']%60:02d} "
               f"({detected['confidence']} confidence)")
 
+        # ── Auto-submit on high confidence (skip confirm page) ────────────────
+        if detected["confidence"] == "high":
+            print(f"[detection] High confidence — auto-submitting without confirm step")
+            trimmed = f"/tmp/trimmed_{pending_id}.mp3"
+            try:
+                trim_audio(audio_path, detected["start_seconds"], detected["end_seconds"], trimmed)
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+                trim_source = trimmed
+            except Exception as _trim_err:
+                print(f"[detection] Trim failed ({_trim_err}) — using full file")
+                trim_source = audio_path
+
+            job_id = str(uuid.uuid4())
+            log_job(job_id,
+                timestamp     = datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                preacher_name = pending["name"],
+                email         = _mask_email(pending["email"]),
+                source_type   = pending["source_type"],
+                status        = "queued",
+                pdf_name      = None,
+                error_msg     = None,
+                duration_sec  = None,
+            )
+            if "@" in pending["email"]:
+                send_confirmation_email(pending["email"], pending["name"])
+            threading.Thread(
+                target=process_sermon,
+                args=(pending["name"], trim_source, pending["email"],
+                      pending["source_type"], trim_source, job_id),
+                daemon=True,
+            ).start()
+            pending["status"] = "auto_submitted"
+            with open(pending_path, "w") as _f:
+                json.dump(pending, _f)
+            return
+
     except Exception as e:
         print(f"[detection] AssemblyAI failed ({e}) — falling back to percentage defaults")
         pending.update({
@@ -929,7 +966,8 @@ def detecting_status(pending_id: str):
     try:
         with open(pending_path) as _f:
             pending = json.load(_f)
-        return {"status": pending.get("status", "detecting")}
+        status = pending.get("status", "detecting")
+        return {"status": status}
     except Exception:
         return {"status": "detecting"}
 

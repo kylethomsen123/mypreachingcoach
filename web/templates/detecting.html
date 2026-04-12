@@ -54,7 +54,9 @@
   fetch("/detecting-status/{{ pending_id }}")
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data.status === "ready") {
+      if (data.status === "auto_submitted") {
+        window.location.href = "/submitted";
+      } else if (data.status === "ready") {
         window.location.href = "/confirm/{{ pending_id }}";
       } else if (data.status === "expired") {
         window.location.href = "/";
