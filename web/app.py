@@ -160,7 +160,14 @@ def send_confirmation_email(to_email: str, preacher_name: str):
         print(f"[confirm] FAILED sending confirmation to {to_email}: {e}")
 
 
-def send_report_email(to_email: str, preacher_name: str, pdf_path: str):
+_FEEDBACK_URL = (
+    "https://docs.google.com/forms/d/e/"
+    "1FAIpQLScVak1fcv8sgEpYgeWDYjwlAAZyXIDeKYwqvc6lWmk7ndL1Vw/viewform"
+)
+
+
+def send_report_email(to_email: str, preacher_name: str, pdf_path: str,
+                      sermon_title: str = ""):
     """Send the finished PDF report via SendGrid."""
     import sendgrid as sg_module
     from sendgrid.helpers.mail import (
@@ -171,70 +178,73 @@ def send_report_email(to_email: str, preacher_name: str, pdf_path: str):
     api_key      = os.getenv("SENDGRID_API_KEY", "")
     from_email   = os.getenv("FROM_EMAIL", "mypreachingcoach@yourdomain.com")
     notify_email = os.getenv("NOTIFY_EMAIL", "")        # Kyle gets a BCC of every report
-    feedback_url = os.getenv("FEEDBACK_FORM_URL", "https://your-google-form-link-here")
 
     if not api_key:
         print("[email] SENDGRID_API_KEY not set — skipping email.")
         return
 
-    # Build a readable sermon title from the filename for the subject line
-    stem         = Path(pdf_path).stem                       # sermon_eval_Title_Name
-    subject_slug = stem.replace("sermon_eval_", "").replace("_", " ").strip()
-    subject      = f"Your Preaching Coach Report is ready — {subject_slug}"
+    # Subject: prefer the Claude-generated sermon title, fall back to filename slug
+    if sermon_title:
+        subject = f"Your Sermon Report is Ready \u2014 {sermon_title}"
+    else:
+        stem         = Path(pdf_path).stem
+        subject_slug = stem.replace("sermon_eval_", "").replace("_", " ").strip()
+        subject      = f"Your Sermon Report is Ready \u2014 {subject_slug}"
+
+    greeting = preacher_name or "there"
 
     plain_body = f"""\
-Hi {preacher_name},
+Hi {greeting},
 
 Your sermon report is attached. Here's what's inside:
-- Sermon structure analysis (ME/WE/GOD/YOU/WE)
-- Vocal delivery scores (measured from audio)
-- Gospel Check
-- Full rubric with scores
+
+- Coaching Priorities \u2014 your top 3 areas for growth with specific next steps
+- Vocal Delivery \u2014 pace, pauses, energy, and filler words (measured from your actual audio)
+- Gospel Check \u2014 how clearly your sermon pointed to Jesus
+- Sermon Structure \u2014 ME/WE/GOD/YOU/WE analysis
 
 A few things to know:
-- Scores are meant to coach, not judge
-- The vocal analysis is measured directly from the audio — not guessed
-- Body language and note-reliance require in-person observation — \
-those lines are left blank for you or a mentor to fill in
+\u2014 Scores are meant to coach, not judge. Think of this like game film for preaching.
+\u2014 Vocal delivery scores come from measured audio data, not guesswork.
+\u2014 Body language and note-dependence can't be measured from audio \u2014 those sections are left blank for you or a mentor to fill in by hand.
 
----
+This tool is in beta and your feedback makes it better for every preacher who uses it. If you have 2 minutes, I'd genuinely appreciate it:
+\U0001f449 {_FEEDBACK_URL}
 
-This is a free beta and I'd love your honest feedback.
-It takes 2 minutes: {feedback_url}
+Or just reply to this email \u2014 I read every one.
 
-Or just reply to this email — I read every response.
-
-— Kyle Thomsen
+For the Gospel,
+Kyle Thomsen
 My Preaching Coach
 """
 
     html_body = f"""\
-<p>Hi {preacher_name},</p>
+<p>Hi {greeting},</p>
 
 <p>Your sermon report is attached. Here's what's inside:</p>
 <ul>
-  <li>Sermon structure analysis (ME/WE/GOD/YOU/WE)</li>
-  <li>Vocal delivery scores (measured from audio)</li>
-  <li>Gospel Check</li>
-  <li>Full rubric with scores</li>
+  <li><strong>Coaching Priorities</strong> \u2014 your top 3 areas for growth with specific next steps</li>
+  <li><strong>Vocal Delivery</strong> \u2014 pace, pauses, energy, and filler words (measured from your actual audio)</li>
+  <li><strong>Gospel Check</strong> \u2014 how clearly your sermon pointed to Jesus</li>
+  <li><strong>Sermon Structure</strong> \u2014 ME/WE/GOD/YOU/WE analysis</li>
 </ul>
 
 <p><strong>A few things to know:</strong></p>
 <ul>
-  <li>Scores are meant to coach, not judge</li>
-  <li>The vocal analysis is measured directly from the audio — not guessed</li>
-  <li>Body language and note-reliance require in-person observation —
-      those lines are left blank for you or a mentor to fill in</li>
+  <li>Scores are meant to coach, not judge. Think of this like game film for preaching.</li>
+  <li>Vocal delivery scores come from measured audio data, not guesswork.</li>
+  <li>Body language and note-dependence can\u2019t be measured from audio \u2014 those sections are left blank for you or a mentor to fill in by hand.</li>
 </ul>
 
-<hr>
+<p>This tool is in beta and your feedback makes it better for every preacher who uses it.
+If you have 2 minutes, I\u2019d genuinely appreciate it:<br>
+\U0001f449 <a href="{_FEEDBACK_URL}">{_FEEDBACK_URL}</a></p>
 
-<p>This is a free beta and I'd love your honest feedback.<br>
-It takes 2 minutes: <a href="{feedback_url}">{feedback_url}</a></p>
+<p>Or just reply to this email \u2014 I read every one.</p>
 
-<p>Or just reply to this email — I read every response.</p>
-
-<p>— Kyle Thomsen<br><em>My Preaching Coach</em></p>
+<p>For the Gospel,<br>
+<strong>Kyle Thomsen</strong><br>
+<em>My Preaching Coach</em></p>
 """
 
     message = Mail(
@@ -684,7 +694,15 @@ def process_sermon(name: str, source: str, email: str,
 
     try:
         log_job(job_id, status="analyzing")
-        cmd = [sys.executable, str(SCRIPT), source, "--name", name]
+        # ── Map app source_type → logger's expected values ─────────────────────
+        src_lower = source.lower()
+        if source_type == "url":
+            log_src_type = "youtube" if ("youtube.com" in src_lower or "youtu.be" in src_lower) else "podcast"
+        else:
+            log_src_type = "file_upload"
+
+        cmd = [sys.executable, str(SCRIPT), source, "--name", name,
+               "--email", email, "--source-type", log_src_type]
         if start_sec is not None and end_sec is not None:
             cmd += ["--start-sec", str(start_sec), "--end-sec", str(end_sec)]
         print(f"[job] Running: {' '.join(cmd)}")
@@ -728,12 +746,21 @@ def process_sermon(name: str, source: str, email: str,
 
         pdf_src = sorted(new_pdfs, key=lambda p: p.stat().st_mtime)[-1]
 
+        # ── Extract sermon title from JSON before moving ───────────────────────
+        json_src     = pdf_src.with_suffix(".json")
+        sermon_title = ""
+        if json_src.exists():
+            try:
+                _d = json.loads(json_src.read_text())
+                sermon_title = _d.get("analysis", {}).get("sermon_title", "")
+            except Exception:
+                pass
+
         # ── Move PDF (and JSON) to reports/beta/ ──────────────────────────────
         pdf_dst = REPORTS_BETA / pdf_src.name
         shutil.move(str(pdf_src), str(pdf_dst))
         print(f"[job] PDF saved to: {pdf_dst}")
 
-        json_src = pdf_src.with_suffix(".json")
         if json_src.exists():
             shutil.move(str(json_src), str(REPORTS_BETA / json_src.name))
 
@@ -741,7 +768,7 @@ def process_sermon(name: str, source: str, email: str,
 
         # ── Email the report ──────────────────────────────────────────────────
         try:
-            send_report_email(email, name, str(pdf_dst))
+            send_report_email(email, name, str(pdf_dst), sermon_title=sermon_title)
             log_job(job_id,
                 status       = "email_sent",
                 duration_sec = round(time.monotonic() - start_time, 1),

@@ -3,9 +3,16 @@
 sermon_analyze.py — My Preaching Coach
 Usage: python3.11 sermon_analyze.py <audio_or_youtube_url> --name "Speaker Name"
 """
-import argparse, json, os, re, subprocess, sys, tempfile
+import argparse, json, os, re, subprocess, sys, tempfile, time
 from datetime import datetime
 from pathlib import Path
+
+# ── Usage logger (optional — delete this block to disable logging) ─────────────
+try:
+    import usage_logger as _usage_logger
+    _LOGGER_AVAILABLE = True
+except ImportError:
+    _LOGGER_AVAILABLE = False
 
 # ── Deps ──────────────────────────────────────────────────────────────────────
 for pkg, imp in [("anthropic","anthropic"),("openai","openai"),
@@ -26,6 +33,10 @@ WHISPER_MAX_BYTES = 24 * 1024 * 1024
 
 FILLER_WORDS = ["um","uh","like","you know","basically","literally",
                 "actually","so","right","okay","kind of","sort of"]
+
+# ── Logging state (populated during a run, read by main() for usage_logger) ────
+_last_claude_usage   = {"input_tokens": 0, "output_tokens": 0}
+_last_whisper_chunks = 1
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -123,12 +134,14 @@ def acquire_audio(source: str, tmpdir: str) -> str:
 # ── Step 2: Transcribe ────────────────────────────────────────────────────────
 def _do_transcribe(client, whisper_model: str, mp3_path: str) -> str:
     """Run transcription with given client/model, handling chunking."""
+    global _last_whisper_chunks
     size = os.path.getsize(mp3_path)
     if size <= WHISPER_MAX_BYTES:
         print(f"  Single chunk ({size/1e6:.1f} MB) ...")
         with open(mp3_path,"rb") as f:
             r = client.audio.transcriptions.create(model=whisper_model,file=f,response_format="text")
         text = r if isinstance(r,str) else r.text
+        _last_whisper_chunks = 1
         print(f"  Words: {len(text.split()):,}  |  Chunks: 1")
         return text
     cdir = os.path.join(os.path.dirname(mp3_path),"chunks")
@@ -147,6 +160,7 @@ def _do_transcribe(client, whisper_model: str, mp3_path: str) -> str:
             r = client.audio.transcriptions.create(model=whisper_model,file=f,response_format="text")
         parts.append(r if isinstance(r,str) else r.text)
     text = " ".join(parts)
+    _last_whisper_chunks = len(chunks)
     print(f"\n  Words: {len(text.split()):,}  |  Chunks: {len(chunks)}")
     return text
 
@@ -467,6 +481,7 @@ presentation: engaging_intro=hook earns attention; clear_structure=logical flow;
 def evaluate_with_claude(transcript: str, speaker: str, acoustic: dict,
                          sermon_type: str = "expository",
                          has_audio: bool = True) -> dict:
+    global _last_claude_usage
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     has_audio_note = (
         "\nNOTE: No audio file -- set pitch_variety score to 0,"
@@ -501,6 +516,10 @@ def evaluate_with_claude(transcript: str, speaker: str, acoustic: dict,
         model="claude-sonnet-4-6", max_tokens=4096,
         messages=[{"role": "user", "content": prompt}]
     )
+    _last_claude_usage = {
+        "input_tokens":  msg.usage.input_tokens,
+        "output_tokens": msg.usage.output_tokens,
+    }
     raw = msg.content[0].text.strip()
     raw = re.sub(r'^```(?:json)?\s*', '', raw)
     raw = re.sub(r'\s*```$', '', raw)
@@ -1475,6 +1494,28 @@ class SermonPDF(FPDF):
             self.write(6, safe(priority))
             self.ln(8)
 
+        # ── Feedback CTA ──────────────────────────────────────────────────────
+        _FEEDBACK_URL = (
+            "https://docs.google.com/forms/d/e/"
+            "1FAIpQLScVak1fcv8sgEpYgeWDYjwlAAZyXIDeKYwqvc6lWmk7ndL1Vw/viewform"
+        )
+        self._rule(gap_before=8, gap_after=5)
+        self.set_x(self.M)
+        self.set_font("Helvetica", "I", 8)
+        self.set_text_color(*C_MGRAY)
+        self.multi_cell(
+            self.CW, 5,
+            safe("This tool is built by a preacher, for preachers. "
+                 "Your honest feedback shapes what it becomes."),
+            align="C",
+        )
+        self.ln(2)
+        self.set_x(self.M)
+        self.set_font("Helvetica", "IU", 7)
+        self.set_text_color(25, 55, 110)   # C_NAVY
+        self.write(5, _FEEDBACK_URL, link=_FEEDBACK_URL)
+        self.set_text_color(0, 0, 0)
+
 
 # ── PDF entry point ────────────────────────────────────────────────────────────
 def build_pdf(speaker: str, source_label: str, acoustic: dict,
@@ -1488,6 +1529,7 @@ def build_pdf(speaker: str, source_label: str, acoustic: dict,
     pdf.page2(analysis)
     pdf.page3(acoustic, analysis.get("vocal", {}))
     pdf.page4(gospel_check, analysis.get("rubric", {}))
+    pdf.page5(analysis, gospel_check)
     pdf.output(out_path)
 
 
@@ -1557,7 +1599,13 @@ def main():
     ap.add_argument("--end-sec", type=int, default=None,
                     dest="end_sec",
                     help="Trim audio: end offset in seconds (used for full-service recordings)")
+    ap.add_argument("--email", default="",
+                    help="Submitter email address (passed from web app for usage logging)")
+    ap.add_argument("--source-type", default=None, dest="source_type",
+                    help="Source type for logging: youtube, podcast, file_upload, local_file")
     args = ap.parse_args()
+
+    start_time = time.monotonic()   # used for processing_time_sec in usage log
 
     if not GROQ_API_KEY and not OPENAI_API_KEY:
         sys.exit("Set GROQ_API_KEY or OPENAI_API_KEY environment variable.")
@@ -1566,6 +1614,18 @@ def main():
     source       = args.source
     source_label = Path(source).name if Path(source).exists() else source[:80]
     is_url       = not Path(source).exists()
+
+    # ── Derive source_type for logging if not explicitly passed ───────────────
+    if args.source_type:
+        log_source_type = args.source_type
+    elif is_url:
+        src_lower = source.lower()
+        if "youtube.com" in src_lower or "youtu.be" in src_lower:
+            log_source_type = "youtube"
+        else:
+            log_source_type = "podcast"
+    else:
+        log_source_type = "local_file"
 
     # ── Resolve speaker name ───────────────────────────────────────────────────
     # Words that suggest the metadata returned an org/church name, not a person
@@ -1606,70 +1666,118 @@ def main():
     os.makedirs(REPORTS_PERSONAL, exist_ok=True)
     os.makedirs(REPORTS_BETA,     exist_ok=True)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        print("\n[1/4] Acquiring audio ...")
-        mp3 = acquire_audio(source, tmpdir)
-        print(f"  Ready: {mp3}")
+    # ── Base log fields (known before analysis begins) ────────────────────────
+    _log_fields = {
+        "preacher_name": speaker,
+        "email":         args.email,
+        "source_type":   log_source_type,
+        "source_value":  source_label,
+        "sermon_type":   args.sermon_type,
+    }
 
-        # ── Trim to sermon window if --start-sec / --end-sec were provided ────
-        if args.start_sec is not None and args.end_sec is not None:
-            print(f"  Trimming to sermon window: {args.start_sec}s – {args.end_sec}s ...")
-            trimmed = os.path.join(tmpdir, "sermon_trimmed.mp3")
-            subprocess.run([
-                "ffmpeg", "-y", "-i", mp3,
-                "-ss", str(args.start_sec), "-to", str(args.end_sec),
-                "-vn", "-c:a", "libmp3lame", "-q:a", "4",
-                trimmed,
-            ], check=True, capture_output=True)
-            mp3 = trimmed
-            print(f"  Trimmed audio ready: {mp3}")
-        # ─────────────────────────────────────────────────────────────────────
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            print("\n[1/4] Acquiring audio ...")
+            mp3 = acquire_audio(source, tmpdir)
+            print(f"  Ready: {mp3}")
 
-        print("\n[2/4] Transcribing with Whisper ...")
-        transcript = transcribe(mp3)
+            # ── Trim to sermon window if --start-sec / --end-sec were provided ────
+            if args.start_sec is not None and args.end_sec is not None:
+                print(f"  Trimming to sermon window: {args.start_sec}s – {args.end_sec}s ...")
+                trimmed = os.path.join(tmpdir, "sermon_trimmed.mp3")
+                subprocess.run([
+                    "ffmpeg", "-y", "-i", mp3,
+                    "-ss", str(args.start_sec), "-to", str(args.end_sec),
+                    "-vn", "-c:a", "libmp3lame", "-q:a", "4",
+                    trimmed,
+                ], check=True, capture_output=True)
+                mp3 = trimmed
+                print(f"  Trimmed audio ready: {mp3}")
+            # ─────────────────────────────────────────────────────────────────────
 
-        print("\n[3/4] Acoustic analysis ...")
-        acoustic = acoustic_analysis(mp3, transcript)
-        print(f"  {acoustic['duration_min']}min | {acoustic['estimated_wpm']}wpm | "
-              f"fillers:{acoustic['filler_count']}({acoustic['filler_per_minute']}/min) | "
-              f"pauses:{acoustic['pause_count']} | dr:{acoustic['dynamic_range_db']}dB | "
-              f"arc:{acoustic['arc_pattern']}")
+            print("\n[2/4] Transcribing with Whisper ...")
+            transcript = transcribe(mp3)
 
-        has_audio = True   # always True for current audio-based workflow
+            print("\n[3/4] Acoustic analysis ...")
+            acoustic = acoustic_analysis(mp3, transcript)
+            print(f"  {acoustic['duration_min']}min | {acoustic['estimated_wpm']}wpm | "
+                  f"fillers:{acoustic['filler_count']}({acoustic['filler_per_minute']}/min) | "
+                  f"pauses:{acoustic['pause_count']} | dr:{acoustic['dynamic_range_db']}dB | "
+                  f"arc:{acoustic['arc_pattern']}")
 
-        print("\n[4/4] Evaluating with Claude (claude-sonnet-4-6) ...")
-        print(f"  Sermon type: {args.sermon_type}")
-        analysis     = evaluate_with_claude(transcript, speaker, acoustic,
-                                             sermon_type=args.sermon_type,
-                                             has_audio=has_audio)
-        gospel_check = analysis["gospel_check"]
+            has_audio = True   # always True for current audio-based workflow
 
-        print_terminal(speaker, acoustic, analysis)
+            print("\n[4/4] Evaluating with Claude (claude-sonnet-4-6) ...")
+            print(f"  Sermon type: {args.sermon_type}")
+            analysis     = evaluate_with_claude(transcript, speaker, acoustic,
+                                                 sermon_type=args.sermon_type,
+                                                 has_audio=has_audio)
+            gospel_check = analysis["gospel_check"]
 
-        safe_name  = re.sub(r"[^\w]+", "_", speaker)
-        title_slug = re.sub(r"[^\w]+", "_", analysis.get("sermon_title", "sermon"))[:35]
-        base       = f"sermon_eval_{title_slug}_{safe_name}"
-        json_path  = os.path.join(REPORTS_PERSONAL, f"{base}.json")
-        pdf_path   = os.path.join(REPORTS_PERSONAL, f"{base}.pdf")
+            print_terminal(speaker, acoustic, analysis)
 
-        with open(json_path, "w") as f:
-            json.dump({
-                "speaker":  speaker,
-                "source":   source_label,
-                "acoustic": acoustic,
-                "analysis": analysis,
-            }, f, indent=2)
+            safe_name  = re.sub(r"[^\w]+", "_", speaker)
+            title_slug = re.sub(r"[^\w]+", "_", analysis.get("sermon_title", "sermon"))[:35]
+            base       = f"sermon_eval_{title_slug}_{safe_name}"
+            json_path  = os.path.join(REPORTS_PERSONAL, f"{base}.json")
+            pdf_path   = os.path.join(REPORTS_PERSONAL, f"{base}.pdf")
 
-        print("Generating PDF ...")
-        build_pdf(speaker, source_label, acoustic, analysis,
-                  gospel_check, pdf_path,
-                  has_audio=has_audio, sermon_type=args.sermon_type)
+            with open(json_path, "w") as f:
+                json.dump({
+                    "speaker":  speaker,
+                    "source":   source_label,
+                    "acoustic": acoustic,
+                    "analysis": analysis,
+                }, f, indent=2)
 
-        print(f"\n{'─'*62}")
-        print(f"  JSON: {json_path}")
-        print(f"  PDF:  {pdf_path}")
-        print(f'\n  open "{pdf_path}"')
-        print()
+            print("Generating PDF ...")
+            build_pdf(speaker, source_label, acoustic, analysis,
+                      gospel_check, pdf_path,
+                      has_audio=has_audio, sermon_type=args.sermon_type)
+
+            print(f"\n{'─'*62}")
+            print(f"  JSON: {json_path}")
+            print(f"  PDF:  {pdf_path}")
+            print(f'\n  open "{pdf_path}"')
+            print()
+
+            # ── Log successful run ────────────────────────────────────────────
+            if _LOGGER_AVAILABLE:
+                gc       = analysis.get("gospel_check", {})
+                in_tok   = _last_claude_usage["input_tokens"]
+                out_tok  = _last_claude_usage["output_tokens"]
+                w_cost   = round(acoustic["duration_min"] * 0.006, 4)
+                c_cost   = round((in_tok * 3 + out_tok * 15) / 1_000_000, 4)
+                gc_total = sum(gc.get(f"{k}_score", 0) for k in ["G","O","S","P","E","L"])
+                _log_fields.update({
+                    "duration_min":         acoustic["duration_min"],
+                    "word_count":           len(transcript.split()),
+                    "whisper_chunks":       _last_whisper_chunks,
+                    "whisper_cost_usd":     w_cost,
+                    "claude_input_tokens":  in_tok,
+                    "claude_output_tokens": out_tok,
+                    "claude_cost_usd":      c_cost,
+                    "total_cost_usd":       round(w_cost + c_cost, 4),
+                    "processing_time_sec":  round(time.monotonic() - start_time, 1),
+                    "overall_score":        analysis.get("structure", {}).get("overall_score", ""),
+                    "gospel_check_total":   gc_total,
+                    "gold_standard_flag":   gc.get("gold_standard", ""),
+                    "incomplete_flag":      gc.get("incomplete_flag", False),
+                    "success":              True,
+                    "error_message":        "",
+                })
+                _usage_logger.log_sermon_run(_log_fields)
+
+    except Exception as _exc:
+        # ── Log failed run (non-crashing) ─────────────────────────────────────
+        if _LOGGER_AVAILABLE:
+            _log_fields.update({
+                "processing_time_sec": round(time.monotonic() - start_time, 1),
+                "success":             False,
+                "error_message":       str(_exc)[:500],
+            })
+            _usage_logger.log_sermon_run(_log_fields)
+        raise
 
 
 if __name__ == "__main__":
