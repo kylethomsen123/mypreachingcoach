@@ -1008,7 +1008,6 @@ def confirm_segment_post(pending_id: str):
             error="This session expired or was already used. Please re-upload your file.")
     with open(pending_path) as _f:
         pending = json.load(_f)
-    os.remove(pending_path)
 
     name        = pending["name"]
     email       = pending["email"]
@@ -1065,6 +1064,8 @@ def confirm_segment_post(pending_id: str):
         duration_sec  = None,
     )
     print(f"[confirm] Queued job {job_id[:8]}  preacher={name!r}  email={email!r}")
+    if os.path.exists(pending_path):
+        os.remove(pending_path)
 
     if "@" in email:
         send_confirmation_email(email, name)

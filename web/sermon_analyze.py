@@ -35,8 +35,9 @@ FILLER_WORDS = ["um","uh","like","you know","basically","literally",
                 "actually","so","right","okay","kind of","sort of"]
 
 # ── Logging state (populated during a run, read by main() for usage_logger) ────
-_last_claude_usage   = {"input_tokens": 0, "output_tokens": 0}
-_last_whisper_chunks = 1
+_last_claude_usage    = {"input_tokens": 0, "output_tokens": 0}
+_last_whisper_chunks  = 1
+_last_whisper_provider = "groq"   # "groq" or "openai" — set by transcribe()
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -166,12 +167,15 @@ def _do_transcribe(client, whisper_model: str, mp3_path: str) -> str:
 
 
 def transcribe(mp3_path: str) -> str:
-    # Try Groq Whisper first (9x cheaper), fall back to OpenAI on rate limit
+    # Try Groq Whisper first (cheaper), fall back to OpenAI on rate limit
+    global _last_whisper_provider
     if GROQ_API_KEY:
         try:
             client = openai.OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
             print("  Using Groq Whisper (whisper-large-v3-turbo)")
-            return _do_transcribe(client, "whisper-large-v3-turbo", mp3_path)
+            result = _do_transcribe(client, "whisper-large-v3-turbo", mp3_path)
+            _last_whisper_provider = "groq"
+            return result
         except Exception as e:
             if "rate_limit" in str(e).lower() or "429" in str(e):
                 print("  Groq rate limit hit — falling back to OpenAI Whisper ...")
@@ -179,7 +183,9 @@ def transcribe(mp3_path: str) -> str:
                 raise
     client = openai.OpenAI(api_key=OPENAI_API_KEY)
     print("  Using OpenAI Whisper")
-    return _do_transcribe(client, "whisper-1", mp3_path)
+    result = _do_transcribe(client, "whisper-1", mp3_path)
+    _last_whisper_provider = "openai"
+    return result
 
 # ── Step 3: Acoustic analysis ─────────────────────────────────────────────────
 def _rms_frames(y: np.ndarray, frame_len: int, hop_len: int) -> np.ndarray:
@@ -1746,7 +1752,9 @@ def main():
                 gc       = analysis.get("gospel_check", {})
                 in_tok   = _last_claude_usage["input_tokens"]
                 out_tok  = _last_claude_usage["output_tokens"]
-                w_cost   = round(acoustic["duration_min"] * 0.006, 4)
+                # Groq Whisper: $0.0014/min  |  OpenAI Whisper: $0.02/min
+                _w_rate  = 0.0014 if _last_whisper_provider == "groq" else 0.02
+                w_cost   = round(acoustic["duration_min"] * _w_rate, 4)
                 c_cost   = round((in_tok * 3 + out_tok * 15) / 1_000_000, 4)
                 gc_total = sum(gc.get(f"{k}_score", 0) for k in ["G","O","S","P","E","L"])
                 _log_fields.update({

@@ -30,30 +30,29 @@ _SA_CANDIDATES = [
 ]
 
 
-def _find_service_account() -> str | None:
+def _get_credentials():
     """
-    Return a path to a valid service account JSON file, or None.
+    Return a google.oauth2.service_account.Credentials object, or None.
 
-    Checks GOOGLE_SA_JSON_B64 first: if set, decodes the base64 value,
-    writes it to /tmp/service_account.json, and returns that path.
-    Falls back to the file-path candidates in _SA_CANDIDATES.
+    Checks GOOGLE_SA_JSON_B64 first: decodes the base64 value and builds
+    credentials directly from the dict — no disk write needed.
+    Falls back to file-path candidates in _SA_CANDIDATES.
     """
+    from google.oauth2.service_account import Credentials
+    _SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
     b64 = os.environ.get("GOOGLE_SA_JSON_B64", "").strip()
     if b64:
         try:
             import base64, json as _json
-            decoded = base64.b64decode(b64)
-            _json.loads(decoded)          # validate before writing
-            tmp_path = "/tmp/service_account.json"
-            with open(tmp_path, "wb") as fh:
-                fh.write(decoded)
-            return tmp_path
+            info = _json.loads(base64.b64decode(b64))
+            return Credentials.from_service_account_info(info, scopes=_SCOPES)
         except Exception as e:
             print(f"[usage_logger] WARNING: GOOGLE_SA_JSON_B64 decode failed — {e}")
 
     for path in _SA_CANDIDATES:
         if path and os.path.isfile(path):
-            return path
+            return Credentials.from_service_account_file(path, scopes=_SCOPES)
     return None
 
 
@@ -73,19 +72,14 @@ def log_sermon_run(fields: dict) -> None:
         fields.setdefault("timestamp", ts)
 
         # ── Locate service account ────────────────────────────────────────────
-        sa_path = _find_service_account()
-        if not sa_path:
-            print("[usage_logger] WARNING: service_account.json not found — skipping log")
+        creds = _get_credentials()
+        if not creds:
+            print("[usage_logger] WARNING: service_account credentials not found — skipping log")
             return
 
         # ── Connect to Google Sheets ──────────────────────────────────────────
         import gspread
-        from google.oauth2.service_account import Credentials
 
-        creds = Credentials.from_service_account_file(
-            sa_path,
-            scopes=["https://www.googleapis.com/auth/spreadsheets"],
-        )
         gc = gspread.authorize(creds)
         sh = gc.open_by_key(SPREADSHEET_ID)
 
