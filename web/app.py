@@ -227,13 +227,13 @@ def send_report_email(to_email: str, preacher_name: str, pdf_path: str,
         print("[email] SENDGRID_API_KEY not set — skipping email.")
         return
 
-    # Subject: prefer the Claude-generated sermon title, fall back to filename slug
+    # Subject: prefer the Claude-generated sermon title, fall back to preacher name
     if sermon_title:
         subject = f"Your Sermon Report is Ready \u2014 {sermon_title}"
+    elif preacher_name:
+        subject = f"Your Sermon Report is Ready \u2014 {preacher_name}"
     else:
-        stem         = Path(pdf_path).stem
-        subject_slug = stem.replace("sermon_eval_", "").replace("_", " ").strip()
-        subject      = f"Your Sermon Report is Ready \u2014 {subject_slug}"
+        subject = "Your Sermon Report is Ready"
 
     greeting = preacher_name or "there"
 
@@ -504,20 +504,22 @@ def _claude_pick_sermon(all_blocks: list, total_duration: float) -> dict:
         text = response.content[0].text.strip()
         print(f"[claude] Sermon block selection:\n{text}")
 
-        parsed = {}
-        for line in text.splitlines():
-            if ":" in line:
-                k, v = line.split(":", 1)
-                parsed[k.strip().upper()] = v.strip()
+        import re as _re
+        idx_m  = _re.search(r'INDEX\s*:\s*(\d+)',              text, _re.IGNORECASE)
+        conf_m = _re.search(r'CONFIDENCE\s*:\s*(high|medium|low)', text, _re.IGNORECASE)
+        reas_m = _re.search(r'REASON\s*:\s*(.+)',              text, _re.IGNORECASE)
 
-        idx = int(parsed.get("INDEX", "0"))
+        idx        = int(idx_m.group(1))            if idx_m  else -1
+        confidence = conf_m.group(1).lower()        if conf_m else "medium"
+        reasoning  = reas_m.group(1).strip()        if reas_m else ""
+
         if 0 <= idx < len(all_blocks):
             b = all_blocks[idx]
             return {
                 "start_seconds": int(b["start"]),
                 "end_seconds":   int(b["end"]),
-                "confidence":    parsed.get("CONFIDENCE", "medium").lower(),
-                "reasoning":     parsed.get("REASON", ""),
+                "confidence":    confidence,
+                "reasoning":     reasoning,
             }
     except Exception as e:
         print(f"[claude] Sermon selection failed ({e}) — falling back to heuristic")

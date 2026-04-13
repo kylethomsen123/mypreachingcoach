@@ -153,8 +153,10 @@ def _do_transcribe(client, whisper_model: str, mp3_path: str) -> str:
     cdir = os.path.join(os.path.dirname(mp3_path),"chunks")
     os.makedirs(cdir, exist_ok=True)
     print(f"  {size/1e6:.1f} MB > 24 MB — splitting ...")
+    # Re-encode (not stream copy) so ffmpeg can split at proper frame boundaries
+    # near the 1200s mark rather than arbitrary byte positions mid-audio-frame.
     subprocess.run(["ffmpeg","-y","-i",mp3_path,"-f","segment",
-                    "-segment_time","1200","-c","copy",
+                    "-segment_time","1200","-c:a","libmp3lame","-q:a","4",
                     os.path.join(cdir,"chunk_%03d.mp3")],
                    check=True, capture_output=True)
     chunks = sorted(Path(cdir).glob("chunk_*.mp3"))
@@ -1631,7 +1633,8 @@ def main():
     # ── Resolve speaker name ───────────────────────────────────────────────────
     # Words that suggest the metadata returned an org/church name, not a person
     _CHURCH_WORDS = {"church", "ministry", "ministries", "community",
-                     "fellowship", "chapel"}
+                     "fellowship", "chapel", "cathedral", "parish",
+                     "diocese", "tabernacle", "assembly", "congregation"}
 
     if args.name:
         # Explicit --name flag always wins — no further checks
