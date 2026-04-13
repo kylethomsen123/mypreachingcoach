@@ -350,16 +350,14 @@ Return this exact JSON (no extra keys):
   "sticky_statement": "<assessment of the bottom line as a memorable/portable phrase -- 1 sentence>",
   "encouragement": "<2-3 sentences on what this preacher does well>",
   "growth_edges": ["<growth edge 1>","<growth edge 2>","<growth edge 3>"],
-  "structure": {{
-    "overall_score": 0,
-    "sections": [
-      {{"label":"ME",  "title":"Personal Hook",   "summary":"<1 sentence>","start_quote":"<first ~15 words>","word_count":0,"estimated_minutes":0.0,"score":0,"strength":"<1 sentence>","growth":"<1 sentence>"}},
-      {{"label":"WE",  "title":"Universal Bridge", "summary":"...","start_quote":"...","word_count":0,"estimated_minutes":0.0,"score":0,"strength":"...","growth":"..."}},
-      {{"label":"GOD", "title":"Biblical Text",    "summary":"...","start_quote":"...","word_count":0,"estimated_minutes":0.0,"score":0,"strength":"...","growth":"..."}},
-      {{"label":"YOU", "title":"Application",      "summary":"...","start_quote":"...","word_count":0,"estimated_minutes":0.0,"score":0,"strength":"...","growth":"..."}},
-      {{"label":"WE2", "title":"Vision / Sendoff", "summary":"...","start_quote":"...","word_count":0,"estimated_minutes":0.0,"score":0,"strength":"...","growth":"..."}}
-    ],
-    "flags": [{{"severity":"warning","text":"<description>"}}]
+  "five_ps": {{
+    "personal_connection": {{"score":0,"label":"<Foundational|Developing|Emerging|Proficient|Exemplary>","narrative":"<2-4 sentence evaluation>","transcript_reference":"<brief quote or moment from sermon, or null>","suggestion":"<concrete suggestion if score 1-4, else null>","coaching_question":"<self-reflection question for the preacher>"}},
+    "problem_naming":      {{"score":0,"label":"...","narrative":"...","transcript_reference":"...","suggestion":"...","coaching_question":"..."}},
+    "proclamation":        {{"score":0,"label":"...","narrative":"...","transcript_reference":"...","suggestion":"...","coaching_question":"..."}},
+    "practical_step":      {{"score":0,"label":"...","narrative":"...","transcript_reference":"...","suggestion":"...","coaching_question":"..."}},
+    "picture_of_change":   {{"score":0,"label":"...","narrative":"...","transcript_reference":"...","suggestion":"...","coaching_question":"..."}},
+    "total_score": 0,
+    "total_label": "<Foundational|Developing|Emerging|Proficient|Exemplary>"
   }},
   "vocal": {{
     "filler_words":             {{"count":{filler_count},"per_minute":{filler_per_minute},"examples":["<word1>","<word2>","<word3>"],"score":0,"notes":"<1-2 sentence coaching note>"}},
@@ -378,12 +376,6 @@ Return this exact JSON (no extra keys):
     "redemptive_history_noted": true,
     "nonchristian_accessible":  true,
     "notes": "<2-3 sentence overall gospel evaluation>",
-    "G_score":0,"G_note":"<1 sentence -- God character depiction>",
-    "O_score":0,"O_note":"<1 sentence -- obstacle/brokenness clarity>",
-    "S_score":0,"S_note":"<1 sentence -- sin/complicity honesty>",
-    "P_score":0,"P_note":"<1 sentence -- perspective/craft/illustration>",
-    "E_score":0,"E_note":"<1 sentence -- how explicitly Jesus is exalted>",
-    "L_score":0,"L_note":"<1 sentence -- lordship/transformed living call>",
     "gold_standard":"Yes|Partially|No",
     "gold_standard_note":"<1 sentence explaining verdict>",
     "incomplete_flag":false
@@ -395,17 +387,45 @@ Return this exact JSON (no extra keys):
   }}
 }}
 
-GOSPEL scoring (each 0-10):
-G  Does the sermon reveal WHO God IS beyond "God loves you"? Specific attributes?
-O  Is the human problem felt, named, real? Does it resonate with life?
-S  Is sin named honestly -- implicating the hearer -- without moralism?
-P  Story/illustration/craft that earns the right to be heard?
-E  Is Jesus the HERO? Cross/resurrection explicitly central, not assumed?
-L  Grace-motivated call to concrete, specific transformed living?
+5 P's Communication Framework scoring (each dimension 1-8, total max 40):
+personal_connection: Does the preacher build authentic personal connection before asking the audience to engage?
+  1-2=no personal connection, generic or institutional feel
+  3-4=brief or surface connection, minimal story or personal reference
+  5-6=some personal grounding but not fully developed
+  7-8=rich, authentic, specific connection that earns trust and attention before the sermon begins
+problem_naming: Is a real, felt human problem clearly named before the biblical text is opened?
+  1-2=no problem named, jumps directly to answers or exposition
+  3-4=problem vaguely implied or named too late in the sermon
+  5-6=problem named but not personalized or emotionally developed
+  7-8=problem clearly named and felt, creates urgency and openness for the message
+proclamation: Is there a bold, declarative "this is what God has done" theological center?
+  1-2=no clear proclamation, text referenced but never declared as truth
+  3-4=proclamation present but buried, weak, or muddled with application
+  5-6=clear proclamation but not given appropriate weight or placement
+  7-8=bold, clear, well-placed proclamation that stands as the sermon's unmistakable center
+practical_step: Is there one specific, achievable action the listener can take this week?
+  1-2=no practical step offered, vague or missing application
+  3-4=step offered but generic, vague, or too many competing steps
+  5-6=practical but could be more specific or better connected to the proclamation
+  7-8=single, clear, achievable step that flows naturally from the text and proclamation
+picture_of_change: Does the preacher paint a vivid vision of what life looks like after obedience?
+  1-2=no picture of change, sermon ends with command or explanation only
+  3-4=vague or generic picture ("God will bless you") without specific imagery
+  5-6=some picture of change but not fully developed or personally resonant
+  7-8=vivid, specific, emotionally resonant vision of transformation
+total_score = sum of all 5 scores (max 40)
+total_label: Foundational(<=10), Developing(<=20), Emerging(<=28), Proficient(<=34), Exemplary(35+)
 
-gold_standard="Yes"     only if E>=8 AND 4+ other scores >=7
-gold_standard="No"      if E<5 OR fewer than 2 scores >=5
-Otherwise "Partially".  incomplete_flag=true if E<5.
+Gospel Check scoring:
+jesus_as_hero:            true if Jesus is clearly the hero -- cross/resurrection explicitly central, not assumed
+heart_level_application:  true if application addresses heart motivations, not just behavior
+behavior_change_present:  true if the sermon relies on behavior change alone (moralism flag -- true = problem)
+redemptive_history_noted: true if redemptive history or biblical narrative is meaningfully noted
+nonchristian_accessible:  true if a non-Christian or skeptic could follow and engage
+
+gold_standard="Yes"      if jesus_as_hero=true AND behavior_change_present=false AND 3+ other checks pass
+gold_standard="No"       if jesus_as_hero=false OR (behavior_change_present=true AND 2+ other checks fail)
+Otherwise "Partially".   incomplete_flag=true if jesus_as_hero=false.
 
 Vocal score guide (use acoustic measurements above):
 filler:       <0.5/min=10, <1.0=8, <2.0=6, <3.5=4, else 2
@@ -503,24 +523,6 @@ class SermonPDF(FPDF):
     GOLD   = (175, 130,  25)   # headings, passage, section labels
     ORANGE = (200, 110,  20)   # flags, medium-score bars
 
-    # Colored band per Andy Stanley section label
-    SEC_CLR = {
-        "ME":  ( 50, 100, 180),   # blue
-        "WE":  ( 35, 130,  90),   # teal
-        "GOD": (185,  90,  25),   # orange-brown
-        "YOU": (145,  35,  35),   # dark red
-        "WE2": ( 90,  50, 150),   # purple
-    }
-
-    # GOSPEL dimensions: (letter, display name, max weighted points)
-    GOSPEL_ROWS = [
-        ("G", "Good -- God's Character",    8),
-        ("O", "Obstacle -- Brokenness",     8),
-        ("S", "Sin -- Personal Complicity", 8),
-        ("P", "Perspective -- Fresh Craft", 6),
-        ("E", "Exalting Jesus",            20),
-        ("L", "Lordship / Living",         10),
-    ]
 
     # ── FPDF overrides ────────────────────────────────────────────────────────
 
@@ -723,12 +725,11 @@ class SermonPDF(FPDF):
         self.ln(4)
 
         # Score badges row — Option C Hybrid: benchmark label (primary) + · score/max (secondary)
-        # Normalise Structure score: Claude sometimes returns 0-100 instead of 0-10
-        raw_struct = ev.get("structure", {}).get("overall_score", 0)
-        struct_sc  = round(raw_struct / 10, 1) if raw_struct > 10 else float(raw_struct)
+        five_ps_total = int(ev.get("five_ps", {}).get("total_score", 0))
+        five_ps_label = ev.get("five_ps", {}).get("total_label",
+                            get_benchmark_label(round(five_ps_total / 40 * 10)))
         badges = [
-            ("Structure",    struct_sc, 10,
-             get_benchmark_label(struct_sc)),
+            ("5 P's",        five_ps_total, 40, five_ps_label),
             ("Exegesis",     ex_t,   20,
              get_benchmark_label(round(ex_t / 20 * 10))),
             ("Application",  app_t,  25,
@@ -822,126 +823,110 @@ class SermonPDF(FPDF):
             "This report is generated by AI and is intended as a coaching tool, "
             "not a definitive evaluation. Scores reflect measurable patterns and "
             "are meant to spark conversation, not render judgment. Vocal metrics "
-            "are derived from acoustic analysis of the audio. Gospel and structure "
-            "scores reflect AI interpretation of the transcript.")
+            "are derived from acoustic analysis of the audio. Gospel and communication "
+            "framework scores reflect AI interpretation of the transcript.")
         self.set_text_color(0, 0, 0)
 
-    # ── Page 2: Sermon Structure ───────────────────────────────────────────────
+    # ── Page 2: 5 P's Communication Framework ────────────────────────────────
+
+    # Colors per dimension
+    _P_DIM_CLR = {
+        "personal_connection": (190,  70,  55),   # coral red
+        "problem_naming":      (195, 130,  20),   # amber
+        "proclamation":        ( 30,  70, 160),   # navy blue
+        "practical_step":      ( 35, 130,  70),   # green
+        "picture_of_change":   (110,  45, 145),   # purple
+    }
 
     def page2(self, analysis: dict):
         self.add_page()
         self._top_bar(f"Page {self.page_no()}")
-        self._page_title(
-            "Sermon Structure -- ME  *  WE  *  GOD  *  YOU  *  WE"
-        )
+        self._page_title("Communication -- The 5 P's")
 
-        # Sermon type note
-        if getattr(self, "sermon_type", None):
-            self.set_x(self.M)
-            self.set_font("Helvetica", "I", 9)
-            self.set_text_color(*C_DGRAY)
-            self.cell(self.CW, 5,
-                      safe(f"Sermon type: {self.sermon_type.capitalize()}"),
-                      new_x="LMARGIN", new_y="NEXT")
-            self.set_text_color(0, 0, 0)
-            self.ln(2)
+        fp = analysis.get("five_ps", {})
 
-        structure   = analysis.get("structure", {})
-        sections    = structure.get("sections", [])
-        flags       = structure.get("flags", [])
-        total_words = sum(s.get("word_count", 0) for s in sections) or 1
+        P_DIMS = [
+            ("personal_connection", "Personal Connection"),
+            ("problem_naming",      "Problem Naming"),
+            ("proclamation",        "Proclamation"),
+            ("practical_step",      "Practical Step"),
+            ("picture_of_change",   "Picture of Change"),
+        ]
 
-        for sec in sections:
-            self._check_page(42)   # new page if < 42 mm remain
+        for key, title in P_DIMS:
+            self._check_page(38)
 
-            label    = sec.get("label", "")
-            title    = sec.get("title", "")
-            raw_sc   = sec.get("score", 0)
-            # Normalise: Claude sometimes returns 0-100 instead of 0-10
-            score    = round(raw_sc / 10, 1) if raw_sc > 10 else float(raw_sc)
-            wc       = sec.get("word_count", 0)
-            mins     = sec.get("estimated_minutes", 0.0)
-            quote    = sec.get("start_quote", "")
-            summary  = sec.get("summary", "")
-            strength = sec.get("strength", "")
-            growth   = sec.get("growth", "")
-            color    = self.SEC_CLR.get(label, C_NAVY)
+            dim        = fp.get(key, {})
+            score      = int(dim.get("score", 0))
+            label      = dim.get("label", get_benchmark_label(score))
+            narrative  = dim.get("narrative", "")
+            ref        = dim.get("transcript_reference") or ""
+            suggestion = dim.get("suggestion") or ""
+            coaching_q = dim.get("coaching_question", "")
+            color      = self._P_DIM_CLR.get(key, C_NAVY)
 
-            # Colored header band: label -- title (left) | score/words/min (right)
+            # Colored header band: title (left) | score + label (right)
             self.set_x(self.M)
             self.set_fill_color(*color)
             self.set_text_color(255, 255, 255)
-            lw = self.CW * 0.58
+            lw = self.CW * 0.60
             rw = self.CW - lw
             self.set_font("Helvetica", "B", 10)
-            self.cell(lw, 8, safe(f"{label} -- {title}"), fill=True)
+            self.cell(lw, 8, safe(title), fill=True)
             self.set_font("Helvetica", "", 9)
-            self.cell(rw, 8,
-                      safe(f"{score:.1f}/10  {wc} words  ~{mins:.1f} min"),
+            self.cell(rw, 8, safe(f"{score}/8  {label}"),
                       fill=True, align="R",
                       new_x="LMARGIN", new_y="NEXT")
             self.set_text_color(0, 0, 0)
 
-            # Opening quote — italic, gray
-            if quote:
+            # Narrative
+            if narrative:
+                self.set_x(self.M)
+                self.set_font("Helvetica", "", 9)
+                self.multi_cell(self.CW, 5, safe(narrative))
+
+            # Transcript reference — italic, muted
+            if ref:
                 self.set_x(self.M)
                 self.set_font("Helvetica", "I", 9)
                 self.set_text_color(*C_DGRAY)
-                self.multi_cell(self.CW, 5, safe(f'"{quote}"'))
+                self.multi_cell(self.CW, 5, safe(f'Reference: "{ref}"'))
                 self.set_text_color(0, 0, 0)
 
-            # Summary — one-sentence section description
-            if summary:
-                self.set_x(self.M)
-                self.set_font("Helvetica", "", 9)
-                self.multi_cell(self.CW, 5, safe(summary))
-
-            # Strength — bold green label inline; write() wraps, never clips
-            if strength:
-                self.set_x(self.M)
-                self.set_font("Helvetica", "B", 9)
-                self.set_text_color(*C_GREEN)
-                self.write(5, "Strength: ")
-                self.set_font("Helvetica", "", 9)
-                self.set_text_color(0, 0, 0)
-                self.write(5, safe(strength))
-                self.ln(6)
-
-            # Growth edge — write() keeps full label on same line, never clips
-            if growth:
+            # Suggestion — only when score <= 4
+            if suggestion:
                 self.set_x(self.M)
                 self.set_font("Helvetica", "B", 9)
                 self.set_text_color(*C_RED)
-                self.write(5, "Growth edge: ")
+                self.write(5, "Suggestion: ")
                 self.set_font("Helvetica", "", 9)
                 self.set_text_color(0, 0, 0)
-                self.write(5, safe(growth))
+                self.write(5, safe(suggestion))
                 self.ln(6)
 
-            self.ln(2)
+            # Coaching question — small italic prompt for self-reflection
+            if coaching_q:
+                self.set_x(self.M)
+                self.set_font("Helvetica", "I", 8)
+                self.set_text_color(*C_MGRAY)
+                self.multi_cell(self.CW, 4.5,
+                                safe(f"Reflect: {coaching_q}"))
+                self.set_text_color(0, 0, 0)
 
-        # Guard: don't let the flags block start within 25 mm of the bottom
-        self._check_page(25)
+            self.ln(3)
 
-        # Flag if GOD section exceeds 40% of total words
-        god_sec = next((s for s in sections if s.get("label") == "GOD"), None)
-        if god_sec and god_sec.get("word_count", 0) / total_words > 0.40:
-            pct = god_sec["word_count"] / total_words * 100
-            self.set_x(self.M)
-            self.set_font("Helvetica", "I", 9)
-            self.set_text_color(*self.ORANGE)
-            self.multi_cell(self.CW, 5,
-                f"! GOD section is {pct:.0f}% of total -- consider rebalancing.")
-            self.set_text_color(0, 0, 0)
-
-        # Any additional flags returned by the AI
-        for flag in flags:
-            self.set_x(self.M)
-            self.set_font("Helvetica", "I", 9)
-            col = C_RED if flag.get("severity") == "warning" else C_DGRAY
-            self.set_text_color(*col)
-            self.multi_cell(self.CW, 5, safe("! " + flag.get("text", "")))
-            self.set_text_color(0, 0, 0)
+        # Total footer
+        self._check_page(12)
+        self._rule(gap_before=2, gap_after=3)
+        total       = int(fp.get("total_score", 0))
+        total_label = fp.get("total_label", "")
+        self.set_x(self.M)
+        self.set_font("Helvetica", "B", 10)
+        self.set_text_color(*C_NAVY)
+        self.cell(self.CW, 6,
+                  safe(f"5 P's Total: {total}/40 -- {total_label}"),
+                  new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
 
     # ── Page 3: Vocal / Rhetorical Delivery ───────────────────────────────────
 
@@ -1165,7 +1150,7 @@ class SermonPDF(FPDF):
             self.set_text_color(255, 255, 255)
             self.set_font("Helvetica", "B", 10)
             self.cell(self.CW, 7,
-                      "  Gospel Check: Christ Not Central  (E score < 5)",
+                      "  Gospel Check: Christ Not Central",
                       fill=True, new_x="LMARGIN", new_y="NEXT")
             self.set_text_color(0, 0, 0)
 
@@ -1176,92 +1161,31 @@ class SermonPDF(FPDF):
         self.multi_cell(self.CW, 5, safe(gc.get("notes", "")))
         self.ln(3)
 
-        # ── GOSPEL Scoring Table ───────────────────────────────────────────────
-        # Columns: Letter | Category | Pts/Max | Bar | Note
-        ltr_w  = 10
-        cat_w  = 48
-        sc_w   = 18
-        bar_w  = 28
-        note_w = self.CW - ltr_w - cat_w - sc_w - bar_w  # ~81.9 mm
+        # ── Pass/Fail Checkboxes ───────────────────────────────────────────────
+        checks = [
+            ("jesus_as_hero",            "Jesus was the hero of the sermon",         False),
+            ("heart_level_application",  "Application addressed heart motivations",  False),
+            ("behavior_change_present",  "Application flows from grace, not behavior-change alone", True),
+            ("redemptive_history_noted", "Redemptive history / narrative noted",     False),
+            ("nonchristian_accessible",  "Accessible to non-Christians / skeptics",  False),
+        ]
 
-        # Header row
-        self.set_x(self.M)
-        self.set_fill_color(*C_NAVY)
-        self.set_text_color(255, 255, 255)
-        self.set_font("Helvetica", "B", 8)
-        self.cell(ltr_w,  6, "Ltr",           fill=True, align="C")
-        self.cell(cat_w,  6, "Category",       fill=True)
-        self.cell(sc_w,   6, "Pts/Max",        fill=True, align="C")
-        self.cell(bar_w,  6, "Score",          fill=True, align="C")
-        self.cell(note_w, 6, "Coaching Note",
-                  fill=True, new_x="LMARGIN", new_y="NEXT")
-        self.set_text_color(0, 0, 0)
+        for key, label, flag_when_true in checks:
+            val    = gc.get(key, False)
+            passed = (not val) if flag_when_true else val
+            marker = "PASS" if passed else "FAIL"
+            col    = C_GREEN if passed else C_RED
 
-        gospel_total = 0
-        for i, (letter, category, max_pts) in enumerate(self.GOSPEL_ROWS):
-            score_raw = gc.get(f"{letter}_score", 0)
-            note_txt  = gc.get(f"{letter}_note", "")
-            pts       = round(score_raw * max_pts / 10)
-            gospel_total += pts
-
-            y0      = self.get_y()
-            bg_col  = (245, 245, 245) if i % 2 == 0 else (255, 255, 255)
-            bar_col = (C_GREEN if score_raw >= 8
-                       else (C_RED if score_raw <= 4 else self.ORANGE))
-            fill_bw = bar_w * score_raw / 10 if score_raw else 0
-
-            # Fixed-height columns
             self.set_x(self.M)
-            self.set_fill_color(*bg_col)
-            self.set_font("Helvetica", "B", 9)
-            self.cell(ltr_w, 6, letter, fill=True, align="C")
+            self.set_fill_color(*col)
+            self.set_text_color(255, 255, 255)
+            self.set_font("Helvetica", "B", 8)
+            self.cell(12, 6, marker, fill=True, align="C")
+            self.set_fill_color(255, 255, 255)
+            self.set_text_color(0, 0, 0)
             self.set_font("Helvetica", "", 9)
-            self.cell(cat_w, 6, safe(category), fill=True)
-            self.set_font("Helvetica", "B", 9)
-            self.cell(sc_w, 6, f"{pts}/{max_pts}", fill=True, align="C")
-
-            # Mini progress bar — drawn as rect, does not advance cursor
-            bar_x = self.get_x()
-            self.set_fill_color(*bg_col)
-            self.rect(bar_x, y0, bar_w, 6, "F")
-            if fill_bw > 0:
-                self.set_fill_color(*bar_col)
-                self.rect(bar_x, y0, fill_bw, 6, "F")
-
-            # Note column — set_xy then multi_cell to properly reset X/Y
-            self.set_xy(bar_x + bar_w, y0)
-            self.set_fill_color(*bg_col)
-            self.set_font("Helvetica", "", 8)
-            self.multi_cell(note_w, 6, safe(note_txt), fill=True)
-
-            # Ensure Y advances at least one full row height
-            if self.get_y() < y0 + 6:
-                self.set_y(y0 + 6)
-
-        # Total row
-        y0 = self.get_y()
-        self.set_x(self.M)
-        self.set_fill_color(*C_LGRAY)
-        self.set_font("Helvetica", "B", 9)
-        self.cell(ltr_w + cat_w, 6, "  Total", fill=True)
-        self.cell(sc_w, 6, f"{gospel_total}/60", fill=True, align="C")
-
-        bar_x   = self.get_x()
-        tot_col = (C_GREEN if gospel_total >= 48
-                   else (C_RED if gospel_total <= 24 else self.ORANGE))
-        fill_bw = bar_w * gospel_total / 60 if gospel_total else 0
-        self.set_fill_color(*C_LGRAY)
-        self.rect(bar_x, y0, bar_w, 6, "F")
-        if fill_bw > 0:
-            self.set_fill_color(*tot_col)
-            self.rect(bar_x, y0, fill_bw, 6, "F")
-
-        self.set_xy(bar_x + bar_w, y0)
-        self.set_fill_color(*C_LGRAY)
-        self.set_font("Helvetica", "I", 8)
-        self.cell(note_w, 6,
-                  safe(get_benchmark_label(round(gospel_total / 60 * 10))),
-                  fill=True, new_x="LMARGIN", new_y="NEXT")
+            self.cell(self.CW - 12, 6, f"  {label}",
+                      new_x="LMARGIN", new_y="NEXT")
         self.ln(4)
 
         self._rule(gap_before=0, gap_after=2)
@@ -1345,34 +1269,50 @@ class SermonPDF(FPDF):
         gc = gospel_check
         lw = self.CW - 32   # label column width
 
-        # ── Structure Scores ──────────────────────────────────────────────────
+        # ── 5 P's Communication ───────────────────────────────────────────────
         self.set_x(self.M)
         self.set_font("Helvetica", "B", 10)
         self.set_text_color(*self.GOLD)
-        self.cell(self.CW, 6, "SERMON STRUCTURE",
+        self.cell(self.CW, 6, "5 P'S COMMUNICATION",
                   new_x="LMARGIN", new_y="NEXT")
         self.set_text_color(0, 0, 0)
 
-        for sec in ev.get("structure", {}).get("sections", []):
-            raw_sc = sec.get("score", 0)
-            score  = round(raw_sc / 10, 1) if raw_sc > 10 else float(raw_sc)
-            label  = sec.get("label", "")
-            title  = sec.get("title", "")
-            bench  = get_benchmark_label(score)
-            sc_col = C_GREEN if score >= 8 else (C_RED if score <= 4 else self.ORANGE)
+        fp = ev.get("five_ps", {})
+        P_SCORECARD = [
+            ("personal_connection", "Personal Connection"),
+            ("problem_naming",      "Problem Naming"),
+            ("proclamation",        "Proclamation"),
+            ("practical_step",      "Practical Step"),
+            ("picture_of_change",   "Picture of Change"),
+        ]
+        for p_key, p_name in P_SCORECARD:
+            dim    = fp.get(p_key, {})
+            score  = int(dim.get("score", 0))
+            label  = dim.get("label", get_benchmark_label(score))
+            sc_col = C_GREEN if score >= 7 else (C_RED if score <= 3 else self.ORANGE)
 
             self.set_x(self.M)
             self.set_font("Helvetica", "", 9)
-            self.cell(lw, 5, safe(f"{label}  {title}"))
+            self.cell(lw, 5, safe(p_name))
             self.set_text_color(*sc_col)
             self.set_font("Helvetica", "B", 9)
-            self.cell(16, 5, f"{score}/10", align="R")
+            self.cell(16, 5, f"{score}/8", align="R")
             self.set_text_color(*C_DGRAY)
             self.set_font("Helvetica", "", 8)
-            self.cell(16, 5, safe(bench), align="R",
+            self.cell(16, 5, safe(label), align="R",
                       new_x="LMARGIN", new_y="NEXT")
             self.set_text_color(0, 0, 0)
 
+        # 5 P's total row
+        p_total       = int(fp.get("total_score", 0))
+        p_total_label = fp.get("total_label", "")
+        self.set_x(self.M)
+        self.set_fill_color(*C_LGRAY)
+        self.set_font("Helvetica", "B", 9)
+        self.cell(lw, 5, "  5 P's Total", fill=True)
+        self.cell(32, 5, safe(f"{p_total}/40  {p_total_label}"),
+                  align="R", fill=True, new_x="LMARGIN", new_y="NEXT")
+        self.set_fill_color(255, 255, 255)
         self.ln(3)
 
         # ── Vocal / Rhetorical Scores ─────────────────────────────────────────
@@ -1413,7 +1353,7 @@ class SermonPDF(FPDF):
 
         self.ln(3)
 
-        # ── Gospel Scores ─────────────────────────────────────────────────────
+        # ── Gospel Check ───────────────────────────────────────────────────────
         self.set_x(self.M)
         self.set_font("Helvetica", "B", 10)
         self.set_text_color(*self.GOLD)
@@ -1421,35 +1361,54 @@ class SermonPDF(FPDF):
                   new_x="LMARGIN", new_y="NEXT")
         self.set_text_color(0, 0, 0)
 
-        gospel_total = 0
-        for letter, category, max_pts in self.GOSPEL_ROWS:
-            score_raw = gc.get(f"{letter}_score", 0)
-            pts       = round(score_raw * max_pts / 10)
-            gospel_total += pts
-            bench  = get_benchmark_label(score_raw)
-            sc_col = C_GREEN if score_raw >= 8 else (C_RED if score_raw <= 4 else self.ORANGE)
+        # Gold Standard one-liner
+        gold_std = gc.get("gold_standard", "Partially")
+        gold_col = (C_GREEN if gold_std == "Yes"
+                    else (C_RED if gold_std == "No" else self.ORANGE))
+        self.set_x(self.M)
+        self.set_fill_color(*gold_col)
+        self.set_text_color(255, 255, 255)
+        self.set_font("Helvetica", "B", 8)
+        self.cell(self.CW, 5, safe(f"  Gold Standard: {gold_std}"),
+                  fill=True, new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+        self.ln(1)
+
+        # PASS/FAIL checklist (compact)
+        checks = [
+            ("jesus_as_hero",            "Jesus was the hero of the sermon",                        False),
+            ("heart_level_application",  "Application addressed heart motivations",                 False),
+            ("behavior_change_present",  "Application flows from grace, not behavior-change alone", True),
+            ("redemptive_history_noted", "Redemptive history / narrative noted",                    False),
+            ("nonchristian_accessible",  "Accessible to non-Christians / skeptics",                 False),
+        ]
+        passes = 0
+        for key, label, flag_when_true in checks:
+            val    = gc.get(key, False)
+            passed = (not val) if flag_when_true else val
+            if passed:
+                passes += 1
+            marker = "PASS" if passed else "FAIL"
+            col    = C_GREEN if passed else C_RED
 
             self.set_x(self.M)
-            self.set_font("Helvetica", "", 9)
-            self.cell(lw, 5, safe(f"{letter}  {category}  ({pts}/{max_pts} pts)"))
-            self.set_text_color(*sc_col)
-            self.set_font("Helvetica", "B", 9)
-            self.cell(16, 5, f"{score_raw}/10", align="R")
-            self.set_text_color(*C_DGRAY)
-            self.set_font("Helvetica", "", 8)
-            self.cell(16, 5, safe(bench), align="R",
-                      new_x="LMARGIN", new_y="NEXT")
+            self.set_fill_color(*col)
+            self.set_text_color(255, 255, 255)
+            self.set_font("Helvetica", "B", 7)
+            self.cell(10, 5, marker, fill=True, align="C")
+            self.set_fill_color(255, 255, 255)
             self.set_text_color(0, 0, 0)
+            self.set_font("Helvetica", "", 8)
+            self.cell(self.CW - 10, 5, f"  {label}",
+                      new_x="LMARGIN", new_y="NEXT")
 
-        # Gospel total row
+        # Total row
         self.set_x(self.M)
         self.set_fill_color(*C_LGRAY)
         self.set_font("Helvetica", "B", 9)
-        self.cell(lw, 6, "  Gospel Total", fill=True)
-        self.cell(16, 6, f"{gospel_total}/60", align="R", fill=True)
-        self.cell(16, 6,
-                  safe(get_benchmark_label(round(gospel_total / 60 * 10))),
-                  align="R", fill=True, new_x="LMARGIN", new_y="NEXT")
+        self.cell(lw, 5, "  Gospel Check Total", fill=True)
+        self.cell(32, 5, f"{passes}/5 checks passed", align="R", fill=True,
+                  new_x="LMARGIN", new_y="NEXT")
         self.ln(4)
 
         # ── Coaching Priorities — action items ────────────────────────────────
@@ -1500,14 +1459,25 @@ def print_terminal(speaker, acoustic, analysis):
     print(f"  BOTTOM LINE: {ev.get('bottom_line', '')[:120]}")
     print()
 
-    print(f"-- SERMON STRUCTURE {'─'*42}")
-    for sec in ev.get("structure", {}).get("sections", []):
-        score = sec.get("score", 0)
-        b     = terminal_bar(score, 10, 10)
-        lbl   = get_benchmark_label(score)
-        print(f"  {sec.get('label',''):<4}  {lbl:<12}  {score:>2}/10  [{b}]  "
-              f"{sec.get('estimated_minutes', 0):.1f}min  {sec.get('word_count', 0)}w")
-        print(f"         Growth edge: {sec.get('growth', '')[:70]}")
+    print(f"-- 5 P'S COMMUNICATION {'─'*40}")
+    fp      = ev.get("five_ps", {})
+    P_NAMES = [
+        ("personal_connection", "Personal Connection"),
+        ("problem_naming",      "Problem Naming"),
+        ("proclamation",        "Proclamation"),
+        ("practical_step",      "Practical Step"),
+        ("picture_of_change",   "Picture of Change"),
+    ]
+    for p_key, p_name in P_NAMES:
+        dim   = fp.get(p_key, {})
+        score = int(dim.get("score", 0))
+        lbl   = dim.get("label", "")
+        b     = terminal_bar(score, 8, 8)
+        print(f"  {p_name:<22}  {lbl:<12}  {score}/8  [{b}]")
+        if dim.get("suggestion"):
+            print(f"       Suggestion: {dim.get('suggestion','')[:70]}")
+    p_total = int(fp.get("total_score", 0))
+    print(f"  {'TOTAL':<22}  {fp.get('total_label',''):<12}  {p_total}/40")
     print()
 
     r    = ev.get("rubric", {})
