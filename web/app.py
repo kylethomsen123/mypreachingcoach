@@ -572,9 +572,11 @@ def run_detection_background(pending_id: str) -> None:
             proxy = os.getenv("YTDLP_PROXY", "")
             cmd   = ["yt-dlp", "-x", "--audio-format", "mp3",
                      "--no-playlist", "--retries", "3",
+                     "--js-runtimes", "node",
+                     "--remote-components", "ejs:github",
                      "-o", os.path.join(tmpdir, "%(title)s.%(ext)s"), url]
             if proxy:
-                cmd += ["--proxy", proxy]
+                cmd += ["--proxy", proxy, "--no-check-certificate"]
             subprocess.run(cmd, check=True, capture_output=True, timeout=600)
             mp3s = list(Path(tmpdir).glob("*.mp3"))
             if not mp3s:

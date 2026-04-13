@@ -82,6 +82,7 @@ def _ytdlp_base_args() -> list:
         "--retries", "3",
         "--socket-timeout", "30",
         "--js-runtimes", "node",
+        "--remote-components", "ejs:github",
     ]
     proxy = os.environ.get("YTDLP_PROXY", "")
     if proxy:
