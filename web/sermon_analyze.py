@@ -797,6 +797,7 @@ class SermonPDF(FPDF):
         five_ps_total = int(ev.get("five_ps", {}).get("total_score", 0))
         five_ps_label = ev.get("five_ps", {}).get("total_label",
                             get_benchmark_label(round(five_ps_total / 40 * 10)))
+        overall_t = five_ps_total + rub_t   # 40 + 20 + 25 + 15 = 100
         badges = [
             ("5 P's",        five_ps_total, 40, five_ps_label),
             ("Exegesis",     ex_t,   20,
@@ -806,7 +807,7 @@ class SermonPDF(FPDF):
             ("Presentation", prs_t,  15,
              get_benchmark_label(round(prs_t / 15 * 10))),
         ]
-        rub_label = get_benchmark_label(round(rub_t / 60 * 10))
+        rub_label = get_benchmark_label(round(overall_t / 100 * 10))
 
         n   = len(badges) + 1   # +1 for Total badge
         gap = 2.5               # mm between badges
@@ -854,7 +855,7 @@ class SermonPDF(FPDF):
         self.set_xy(tx, by + 13)
         self.set_font("Helvetica", "", 8)
         self.set_text_color(160, 180, 210)
-        self.cell(bw, 5, safe(f"\xb7 {rub_t}/60"), align="C")
+        self.cell(bw, 5, safe(f"\xb7 {overall_t}/100"), align="C")
 
         self.set_text_color(0, 0, 0)
         self.set_y(by + bh + 5)
