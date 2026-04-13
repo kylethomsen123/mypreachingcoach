@@ -21,9 +21,9 @@ HEADERS = [
     "incomplete_flag", "success", "error_message",
 ]
 
-# Candidate paths for the service account JSON (tried in order)
+# Candidate paths for the service account JSON (tried in order after env var check)
 _SA_CANDIDATES = [
-    os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""),           # explicit env var
+    os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""),           # explicit file-path env var
     "/app/service_account.json",                                  # Railway volume
     str(Path(__file__).parent / "service_account.json"),         # same dir as this script
     str(Path.home() / "Desktop" / "MyPreachingCoach" / "service_account.json"),  # local CLI
@@ -31,7 +31,26 @@ _SA_CANDIDATES = [
 
 
 def _find_service_account() -> str | None:
-    """Return the first existing service account JSON path, or None."""
+    """
+    Return a path to a valid service account JSON file, or None.
+
+    Checks GOOGLE_SA_JSON_B64 first: if set, decodes the base64 value,
+    writes it to /tmp/service_account.json, and returns that path.
+    Falls back to the file-path candidates in _SA_CANDIDATES.
+    """
+    b64 = os.environ.get("GOOGLE_SA_JSON_B64", "").strip()
+    if b64:
+        try:
+            import base64, json as _json
+            decoded = base64.b64decode(b64)
+            _json.loads(decoded)          # validate before writing
+            tmp_path = "/tmp/service_account.json"
+            with open(tmp_path, "wb") as fh:
+                fh.write(decoded)
+            return tmp_path
+        except Exception as e:
+            print(f"[usage_logger] WARNING: GOOGLE_SA_JSON_B64 decode failed — {e}")
+
     for path in _SA_CANDIDATES:
         if path and os.path.isfile(path):
             return path
