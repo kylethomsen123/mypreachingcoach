@@ -120,7 +120,41 @@ def _mark_interrupted_jobs() -> None:
             print(f"[startup] WARNING: could not write interrupted jobs — {e}")
 
 
-_mark_interrupted_jobs()   # surface any jobs killed by a prior restart
+def _cleanup_stale_pending(max_age_hours: int = 6) -> None:
+    """On startup, delete pending detection files older than max_age_hours.
+
+    These are left behind when a user closes their browser during the
+    detecting/confirm flow without ever submitting. Each abandoned session
+    can hold a large MP3 on /tmp that would otherwise accumulate until
+    the next Railway redeploy.
+    """
+    removed_files = 0
+    removed_bytes = 0
+    for p in Path("/tmp").glob("pending_*.json"):
+        try:
+            age_hours = (time.time() - p.stat().st_mtime) / 3600
+            if age_hours <= max_age_hours:
+                continue
+            try:
+                data = json.loads(p.read_text())
+                audio = data.get("tmp_path")
+                if audio and os.path.exists(audio):
+                    removed_bytes += os.path.getsize(audio)
+                    os.remove(audio)
+                    removed_files += 1
+            except Exception:
+                pass
+            p.unlink()
+            removed_files += 1
+        except Exception:
+            pass
+    if removed_files:
+        print(f"[startup] Cleaned up {removed_files} stale pending file(s) "
+              f"({removed_bytes / 1e6:.1f} MB freed)")
+
+
+_mark_interrupted_jobs()      # surface any jobs killed by a prior restart
+_cleanup_stale_pending()      # free disk space from abandoned detection sessions
 
 # ── Email ──────────────────────────────────────────────────────────────────────
 def send_confirmation_email(to_email: str, preacher_name: str):
