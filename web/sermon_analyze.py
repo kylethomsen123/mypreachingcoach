@@ -32,8 +32,7 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY","")
 WHISPER_MAX_BYTES = 24 * 1024 * 1024
 FEEDBACK_URL      = os.environ.get(
     "FEEDBACK_FORM_URL",
-    "https://docs.google.com/forms/d/e/"
-    "1FAIpQLScVak1fcv8sgEpYgeWDYjwlAAZyXIDeKYwqvc6lWmk7ndL1Vw/viewform"
+    "https://forms.gle/C2MMAqfsigGcWEhS9"
 )
 
 FILLER_WORDS = ["um","uh","like","you know","basically","literally",
@@ -1530,9 +1529,11 @@ class SermonPDF(FPDF):
         )
         self.ln(2)
         self.set_x(self.M)
-        self.set_font("Helvetica", "IU", 7)
+        self.set_font("Helvetica", "BU", 9)
         self.set_text_color(25, 55, 110)   # C_NAVY
-        self.write(5, _FEEDBACK_URL, link=_FEEDBACK_URL)
+        cw2 = self.CW
+        self.cell(cw2, 6, "Submit Feedback", align="C", link=_FEEDBACK_URL,
+                  new_x="LMARGIN", new_y="NEXT")
         self.set_text_color(0, 0, 0)
 
 
