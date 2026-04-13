@@ -943,9 +943,6 @@ class SermonPDF(FPDF):
                       new_x="LMARGIN", new_y="NEXT")
             self.set_text_color(0, 0, 0)
 
-            # Score bar
-            self._score_bar(score, 10, height=2)
-
             # Opening quote — italic, gray
             if quote:
                 self.set_x(self.M)
