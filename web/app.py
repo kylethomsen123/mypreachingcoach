@@ -574,7 +574,6 @@ def run_detection_background(pending_id: str) -> None:
                      "--no-playlist", "--retries", "3",
                      "--js-runtimes", "node",
                      "--remote-components", "ejs:github",
-                     "--extractor-args", "youtube:player_client=ios",
                      "-o", os.path.join(tmpdir, "%(title)s.%(ext)s"), url]
             if proxy:
                 cmd += ["--proxy", proxy, "--no-check-certificate"]

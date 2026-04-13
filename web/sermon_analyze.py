@@ -83,7 +83,6 @@ def _ytdlp_base_args() -> list:
         "--socket-timeout", "30",
         "--js-runtimes", "node",
         "--remote-components", "ejs:github",
-        "--extractor-args", "youtube:player_client=ios",
     ]
     proxy = os.environ.get("YTDLP_PROXY", "")
     if proxy:
