@@ -572,16 +572,6 @@ class SermonPDF(FPDF):
         "WE2": ( 90,  50, 150),   # purple
     }
 
-    # GOSPEL dimensions: (letter, display name, max weighted points)
-    GOSPEL_ROWS = [
-        ("G", "Good -- God's Character",    8),
-        ("O", "Obstacle -- Brokenness",     8),
-        ("S", "Sin -- Personal Complicity", 8),
-        ("P", "Perspective -- Fresh Craft", 6),
-        ("E", "Exalting Jesus",            20),
-        ("L", "Lordship / Living",         10),
-    ]
-
     # ── FPDF overrides ────────────────────────────────────────────────────────
 
     def __init__(self):
