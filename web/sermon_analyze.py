@@ -413,7 +413,7 @@ Return this exact JSON (no extra keys):
   "encouragement": "<2-3 sentences on what this preacher does well>",
   "growth_edges": ["<growth edge 1>","<growth edge 2>","<growth edge 3>"],
   "five_ps": {{
-    "personal_connection": {{"score":0,"label":"<Foundational|Developing|Emerging|Proficient|Exemplary>","narrative":"<2-4 sentence evaluation>","transcript_reference":"<brief quote or moment from sermon, or null>","suggestion":"<concrete suggestion if score 1-4, else null>","coaching_question":"<self-reflection question for the preacher>"}},
+    "personal_connection": {{"score":0,"label":"<Foundational|Developing|Emerging|Proficient|Exemplary>","narrative":"<2 sentences max>","transcript_reference":"<brief quote or moment from sermon, or null>","suggestion":"<concrete suggestion if score 1-4, else null>","coaching_question":"<self-reflection question for the preacher>"}},
     "problem_naming":      {{"score":0,"label":"...","narrative":"...","transcript_reference":"...","suggestion":"...","coaching_question":"..."}},
     "proclamation":        {{"score":0,"label":"...","narrative":"...","transcript_reference":"...","suggestion":"...","coaching_question":"..."}},
     "practical_step":      {{"score":0,"label":"...","narrative":"...","transcript_reference":"...","suggestion":"...","coaching_question":"..."}},
@@ -450,6 +450,7 @@ Return this exact JSON (no extra keys):
 }}
 
 5 P's Communication Framework scoring (each dimension 1-8, total max 40):
+IMPORTANT: each narrative field must be 2 sentences maximum — no exceptions.
 personal_connection: Does the preacher build authentic personal connection before asking the audience to engage?
   1-2=no personal connection, generic or institutional feel
   3-4=brief or surface connection, minimal story or personal reference
