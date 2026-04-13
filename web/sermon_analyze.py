@@ -1068,7 +1068,7 @@ class SermonPDF(FPDF):
             (
                 "2. Words Per Minute (Pace)",
                 va.get("pace", {}).get("score", a["wpm_score"]),
-                [f"Measured: {wpm} wpm  ({pace_desc} -- ideal: 130-170 wpm)"
+                [f"Measured: {wpm} wpm  ({'in ideal range' if pace_desc == 'ideal' else pace_desc} -- ideal: 130-170 wpm)"
                  "  (High confidence)"],
                 va.get("pace", {}).get("notes", ""),
             ),
@@ -1242,7 +1242,7 @@ class SermonPDF(FPDF):
         checks = [
             ("jesus_as_hero",            "Jesus was the hero of the sermon",         False),
             ("heart_level_application",  "Application addressed heart motivations",  False),
-            ("behavior_change_present",  "Behavior-change only (moralism flag)",     True),
+            ("behavior_change_present",  "Application flows from grace, not behavior-change alone", True),
             ("redemptive_history_noted", "Redemptive history / narrative noted",     False),
             ("nonchristian_accessible",  "Accessible to non-Christians / skeptics",  False),
         ]
@@ -1438,7 +1438,7 @@ class SermonPDF(FPDF):
 
         self.ln(3)
 
-        # ── Gospel Scores ─────────────────────────────────────────────────────
+        # ── Gospel Check ───────────────────────────────────────────────────────
         self.set_x(self.M)
         self.set_font("Helvetica", "B", 10)
         self.set_text_color(*self.GOLD)
@@ -1446,35 +1446,54 @@ class SermonPDF(FPDF):
                   new_x="LMARGIN", new_y="NEXT")
         self.set_text_color(0, 0, 0)
 
-        gospel_total = 0
-        for letter, category, max_pts in self.GOSPEL_ROWS:
-            score_raw = gc.get(f"{letter}_score", 0)
-            pts       = round(score_raw * max_pts / 10)
-            gospel_total += pts
-            bench  = get_benchmark_label(score_raw)
-            sc_col = C_GREEN if score_raw >= 8 else (C_RED if score_raw <= 4 else self.ORANGE)
+        # Gold Standard one-liner
+        gold_std = gc.get("gold_standard", "Partially")
+        gold_col = (C_GREEN if gold_std == "Yes"
+                    else (C_RED if gold_std == "No" else self.ORANGE))
+        self.set_x(self.M)
+        self.set_fill_color(*gold_col)
+        self.set_text_color(255, 255, 255)
+        self.set_font("Helvetica", "B", 8)
+        self.cell(self.CW, 5, safe(f"  Gold Standard: {gold_std}"),
+                  fill=True, new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+        self.ln(1)
+
+        # PASS/FAIL checklist (compact)
+        checks = [
+            ("jesus_as_hero",            "Jesus was the hero of the sermon",                        False),
+            ("heart_level_application",  "Application addressed heart motivations",                 False),
+            ("behavior_change_present",  "Application flows from grace, not behavior-change alone", True),
+            ("redemptive_history_noted", "Redemptive history / narrative noted",                    False),
+            ("nonchristian_accessible",  "Accessible to non-Christians / skeptics",                 False),
+        ]
+        passes = 0
+        for key, label, flag_when_true in checks:
+            val    = gc.get(key, False)
+            passed = (not val) if flag_when_true else val
+            if passed:
+                passes += 1
+            marker = "PASS" if passed else "FAIL"
+            col    = C_GREEN if passed else C_RED
 
             self.set_x(self.M)
-            self.set_font("Helvetica", "", 9)
-            self.cell(lw, 5, safe(f"{letter}  {category}  ({pts}/{max_pts} pts)"))
-            self.set_text_color(*sc_col)
-            self.set_font("Helvetica", "B", 9)
-            self.cell(16, 5, f"{score_raw}/10", align="R")
-            self.set_text_color(*C_DGRAY)
-            self.set_font("Helvetica", "", 8)
-            self.cell(16, 5, safe(bench), align="R",
-                      new_x="LMARGIN", new_y="NEXT")
+            self.set_fill_color(*col)
+            self.set_text_color(255, 255, 255)
+            self.set_font("Helvetica", "B", 7)
+            self.cell(10, 5, marker, fill=True, align="C")
+            self.set_fill_color(255, 255, 255)
             self.set_text_color(0, 0, 0)
+            self.set_font("Helvetica", "", 8)
+            self.cell(self.CW - 10, 5, f"  {label}",
+                      new_x="LMARGIN", new_y="NEXT")
 
-        # Gospel total row
+        # Total row
         self.set_x(self.M)
         self.set_fill_color(*C_LGRAY)
         self.set_font("Helvetica", "B", 9)
-        self.cell(lw, 6, "  Gospel Total", fill=True)
-        self.cell(16, 6, f"{gospel_total}/60", align="R", fill=True)
-        self.cell(16, 6,
-                  safe(get_benchmark_label(round(gospel_total / 60 * 10))),
-                  align="R", fill=True, new_x="LMARGIN", new_y="NEXT")
+        self.cell(lw, 5, "  Gospel Check Total", fill=True)
+        self.cell(32, 5, f"{passes}/5 checks passed", align="R", fill=True,
+                  new_x="LMARGIN", new_y="NEXT")
         self.ln(4)
 
         # ── Coaching Priorities — action items ────────────────────────────────
