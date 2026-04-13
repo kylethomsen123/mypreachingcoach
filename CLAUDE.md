@@ -116,25 +116,29 @@ Automatically finds the sermon within a full church service recording.
 | P1 | Cover | Sermon title, preacher, passage, Overall score badge, Gospel score badge, Big Idea, Sticky Statement, Bottom Line, Encouragement, Top 3 Coaching Priorities |
 | P2 | Vocal Delivery | 7 elements — name + score, bar, measurement, FULL narrative note (no truncation) |
 | P3 | Sermon Structure | ME/WE/GOD/YOU/WE2 — label + score + word count + time, bar, summary, Strength, Growth Edge. Flags section at bottom |
-| P4 | Gospel Check | Gold Standard flag + narrative. G/O/S/P/E/L scoring TABLE. Total row. Rubric subtotals. Body language / Note reliance blanks |
+| P4 | Gospel Check | Gold Standard flag + narrative. 5-item PASS/FAIL checklist. Rubric subtotals. Body language / Note reliance blanks |
 | P5 | Scorecard | All scores in one clean list. Coaching Priorities as action items |
 
 ---
 
 ## Evaluation Frameworks
 
-### Primary: GOSPEL Check (Kyle Thomsen)
-| Letter | Dimension | Points |
-|--------|-----------|--------|
-| G | Good — God's character | 8 |
-| O | Obstacle — brokenness | 8 |
-| S | Sin — personal complicity | 8 |
-| P | Perspective — fresh craft | 6 |
-| E | Exalting Jesus | 20 |
-| L | Lordship / Living | 10 |
-| **Total** | | **60** |
+### Primary: Gospel Check (Kyle Thomsen)
+5-item PASS/FAIL checklist evaluated by Claude:
 
-**E Threshold:** E < 5 → flag "Gospel Check: Incomplete"
+| Item | Key | Flag direction |
+|------|-----|----------------|
+| Jesus was the hero of the sermon | `jesus_as_hero` | FAIL = Christ not central |
+| Application addressed heart motivations | `heart_level_application` | FAIL = surface-level |
+| Behavior-change only (moralism flag) | `behavior_change_present` | PASS = moralism present (inverted) |
+| Redemptive history / narrative noted | `redemptive_history_noted` | FAIL = missing |
+| Accessible to non-Christians / skeptics | `nonchristian_accessible` | FAIL = insider-only |
+
+**Gold Standard:** "Yes" if jesus_as_hero=true AND behavior_change_present=false AND 3+ other checks pass
+**"No"** if jesus_as_hero=false OR (behavior_change_present=true AND 2+ other checks fail)
+**incomplete_flag=true** if jesus_as_hero=false → triggers "Christ Not Central" banner on PDF
+
+**gospel_check_total** in usage log = count of passing items (0–5)
 
 ### Secondary: Andy Stanley ME-WE-GOD-YOU-WE Structure
 ### Tertiary: BIBL 350 Rubric

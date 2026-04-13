@@ -434,12 +434,6 @@ Return this exact JSON (no extra keys):
     "redemptive_history_noted": true,
     "nonchristian_accessible":  true,
     "notes": "<2-3 sentence overall gospel evaluation>",
-    "G_score":0,"G_note":"<1 sentence -- God character depiction>",
-    "O_score":0,"O_note":"<1 sentence -- obstacle/brokenness clarity>",
-    "S_score":0,"S_note":"<1 sentence -- sin/complicity honesty>",
-    "P_score":0,"P_note":"<1 sentence -- perspective/craft/illustration>",
-    "E_score":0,"E_note":"<1 sentence -- how explicitly Jesus is exalted>",
-    "L_score":0,"L_note":"<1 sentence -- lordship/transformed living call>",
     "gold_standard":"Yes|Partially|No",
     "gold_standard_note":"<1 sentence explaining verdict>",
     "incomplete_flag":false
@@ -451,17 +445,16 @@ Return this exact JSON (no extra keys):
   }}
 }}
 
-GOSPEL scoring (each 0-10):
-G  Does the sermon reveal WHO God IS beyond "God loves you"? Specific attributes?
-O  Is the human problem felt, named, real? Does it resonate with life?
-S  Is sin named honestly -- implicating the hearer -- without moralism?
-P  Story/illustration/craft that earns the right to be heard?
-E  Is Jesus the HERO? Cross/resurrection explicitly central, not assumed?
-L  Grace-motivated call to concrete, specific transformed living?
+Gospel Check scoring:
+jesus_as_hero:            true if Jesus is clearly the hero — cross/resurrection explicitly central, not assumed
+heart_level_application:  true if application addresses heart motivations, not just behavior
+behavior_change_present:  true if the sermon relies on behavior change alone (moralism flag — true = problem)
+redemptive_history_noted: true if redemptive history or biblical narrative is meaningfully noted
+nonchristian_accessible:  true if a non-Christian or skeptic could follow and engage
 
-gold_standard="Yes"     only if E>=8 AND 4+ other scores >=7
-gold_standard="No"      if E<5 OR fewer than 2 scores >=5
-Otherwise "Partially".  incomplete_flag=true if E<5.
+gold_standard="Yes"      if jesus_as_hero=true AND behavior_change_present=false AND 3+ other checks pass
+gold_standard="No"       if jesus_as_hero=false OR (behavior_change_present=true AND 2+ other checks fail)
+Otherwise "Partially".   incomplete_flag=true if jesus_as_hero=false.
 
 Vocal score guide (use acoustic measurements above):
 filler:       <0.5/min=10, <1.0=8, <2.0=6, <3.5=4, else 2
@@ -1229,7 +1222,7 @@ class SermonPDF(FPDF):
             self.set_text_color(255, 255, 255)
             self.set_font("Helvetica", "B", 10)
             self.cell(self.CW, 7,
-                      "  Gospel Check: Christ Not Central  (E score < 5)",
+                      "  Gospel Check: Christ Not Central",
                       fill=True, new_x="LMARGIN", new_y="NEXT")
             self.set_text_color(0, 0, 0)
 
@@ -1756,7 +1749,14 @@ def main():
                 _w_rate  = 0.0014 if _last_whisper_provider == "groq" else 0.02
                 w_cost   = round(acoustic["duration_min"] * _w_rate, 4)
                 c_cost   = round((in_tok * 3 + out_tok * 15) / 1_000_000, 4)
-                gc_total = sum(gc.get(f"{k}_score", 0) for k in ["G","O","S","P","E","L"])
+                # Count passing Gospel Check items (behavior_change_present is a flag — True = fail)
+                gc_total = sum([
+                    bool(gc.get("jesus_as_hero")),
+                    bool(gc.get("heart_level_application")),
+                    not bool(gc.get("behavior_change_present")),
+                    bool(gc.get("redemptive_history_noted")),
+                    bool(gc.get("nonchristian_accessible")),
+                ])
                 _log_fields.update({
                     "duration_min":         acoustic["duration_min"],
                     "word_count":           len(transcript.split()),
