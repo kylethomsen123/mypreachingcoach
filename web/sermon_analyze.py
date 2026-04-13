@@ -30,6 +30,11 @@ OPENAI_API_KEY    = os.environ.get("OPENAI_API_KEY","")
 GROQ_API_KEY      = os.environ.get("GROQ_API_KEY","")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY","")
 WHISPER_MAX_BYTES = 24 * 1024 * 1024
+FEEDBACK_URL      = os.environ.get(
+    "FEEDBACK_FORM_URL",
+    "https://docs.google.com/forms/d/e/"
+    "1FAIpQLScVak1fcv8sgEpYgeWDYjwlAAZyXIDeKYwqvc6lWmk7ndL1Vw/viewform"
+)
 
 FILLER_WORDS = ["um","uh","like","you know","basically","literally",
                 "actually","so","right","okay","kind of","sort of"]
@@ -1494,10 +1499,7 @@ class SermonPDF(FPDF):
             self.ln(8)
 
         # ── Feedback CTA ──────────────────────────────────────────────────────
-        _FEEDBACK_URL = (
-            "https://docs.google.com/forms/d/e/"
-            "1FAIpQLScVak1fcv8sgEpYgeWDYjwlAAZyXIDeKYwqvc6lWmk7ndL1Vw/viewform"
-        )
+        _FEEDBACK_URL = FEEDBACK_URL
         self._rule(gap_before=8, gap_after=5)
         self.set_x(self.M)
         self.set_font("Helvetica", "I", 8)

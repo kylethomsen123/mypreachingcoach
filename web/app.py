@@ -85,6 +85,15 @@ def _mask_email(email: str) -> str:
     return local[0] + "***@" + domain
 
 
+def _rmdir_if_detection_tmpdir(directory: Path) -> None:
+    """Remove directory if it was a detection tmpdir and is now empty."""
+    try:
+        if directory.name.startswith("detection_") and directory != Path("/tmp"):
+            directory.rmdir()   # only succeeds if empty
+    except OSError:
+        pass
+
+
 def _mark_interrupted_jobs() -> None:
     """On startup, mark any jobs still in 'queued'/'started'/'analyzing' as interrupted.
 
@@ -142,6 +151,7 @@ def _cleanup_stale_pending(max_age_hours: int = 6) -> None:
                     removed_bytes += os.path.getsize(audio)
                     os.remove(audio)
                     removed_files += 1
+                    _rmdir_if_detection_tmpdir(Path(audio).parent)
             except Exception:
                 pass
             p.unlink()
@@ -594,6 +604,8 @@ def run_detection_background(pending_id: str) -> None:
                 trim_audio(audio_path, detected["start_seconds"], detected["end_seconds"], trimmed)
                 if os.path.exists(audio_path):
                     os.remove(audio_path)
+                # Clean up empty detection tmpdir after removing the source audio
+                _rmdir_if_detection_tmpdir(Path(audio_path).parent)
                 trim_source = trimmed
             except Exception as _trim_err:
                 print(f"[detection] Trim failed ({_trim_err}) — using full file")
@@ -833,6 +845,7 @@ def process_sermon(name: str, source: str, email: str,
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
             print(f"[job] Cleaned up temp file: {tmp_path}")
+            _rmdir_if_detection_tmpdir(Path(tmp_path).parent)
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
