@@ -3,7 +3,7 @@
 sermon_analyze.py — My Preaching Coach
 Usage: python3.11 sermon_analyze.py <audio_or_youtube_url> --name "Speaker Name"
 """
-import argparse, json, os, re, subprocess, sys, tempfile, time
+import argparse, json, os, re, subprocess, sys, tempfile, time, urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -90,6 +90,14 @@ def _ytdlp_base_args() -> list:
     return args
 
 
+def _ytdlp_proxy_args() -> list:
+    """Return only the proxy args (no other base args)."""
+    proxy = os.environ.get("YTDLP_PROXY", "")
+    if proxy:
+        return ["--proxy", proxy, "--no-check-certificate"]
+    return []
+
+
 def get_youtube_info(url: str) -> dict:
     """
     Fetch YouTube metadata without downloading the video.
@@ -127,6 +135,19 @@ def acquire_audio(source: str, tmpdir: str) -> str:
                        check=True, capture_output=True)
         return out
     print("  Downloading via yt-dlp ...")
+    mp3_path = os.path.join(tmpdir, "audio.mp3")
+
+    if os.environ.get("YTDLP_PROXY", ""):
+        # Two-step: proxy handles only the YouTube handshake (URL extraction),
+        # then audio bytes are fetched directly from the CDN — no Webshare bandwidth used.
+        direct_url = _extract_direct_audio_url(source)
+        if direct_url:
+            _download_and_convert(direct_url, mp3_path, tmpdir)
+            return mp3_path
+        # URL extraction failed — fall through to original single-step.
+        print("  URL extraction failed — falling back to full yt-dlp download (uses proxy bandwidth).")
+
+    # Original single-step path: yt-dlp handles everything (proxy routes all traffic when set).
     subprocess.run(
         [_ytdlp_bin(), "-x", "--audio-format", "mp3"]
         + _ytdlp_base_args()
@@ -136,6 +157,46 @@ def acquire_audio(source: str, tmpdir: str) -> str:
     files = list(Path(tmpdir).glob("*.mp3"))
     if not files: sys.exit("yt-dlp produced no mp3.")
     return str(files[0])
+
+
+def _extract_direct_audio_url(youtube_url: str) -> str | None:
+    """
+    Ask yt-dlp (via proxy) to resolve the direct CDN audio URL without downloading.
+    Only the YouTube handshake flows through Webshare — no audio bytes do.
+    Returns the raw CDN URL, or None on failure.
+    """
+    base_args = [
+        "--no-playlist", "--retries", "3", "--socket-timeout", "30",
+        "--js-runtimes", "node", "--remote-components", "ejs:github",
+    ]
+    try:
+        result = subprocess.run(
+            [_ytdlp_bin(), "--get-url",
+             "-f", "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio"]
+            + base_args + _ytdlp_proxy_args() + [youtube_url],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            url = result.stdout.strip().splitlines()[0]
+            if url.startswith("http"):
+                print(f"  CDN URL extracted ({url[:60]}...)")
+                return url
+        print(f"  --get-url failed (rc={result.returncode}): {result.stderr.strip()[:200]}")
+    except Exception as e:
+        print(f"  URL extraction error: {e}")
+    return None
+
+
+def _download_and_convert(url: str, mp3_path: str, tmpdir: str) -> None:
+    """Download audio from CDN directly (no proxy) and transcode to mp3."""
+    raw_path = os.path.join(tmpdir, "audio_raw")
+    print("  Fetching audio from CDN directly (no proxy) ...")
+    urllib.request.urlretrieve(url, raw_path)
+    print("  Transcoding to mp3 via ffmpeg ...")
+    subprocess.run(["ffmpeg", "-y", "-i", raw_path, "-q:a", "4", mp3_path],
+                   check=True, capture_output=True)
+    os.remove(raw_path)
+
 
 # ── Step 2: Transcribe ────────────────────────────────────────────────────────
 def _do_transcribe(client, whisper_model: str, mp3_path: str) -> str:
