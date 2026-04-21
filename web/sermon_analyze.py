@@ -142,10 +142,14 @@ def acquire_audio(source: str, tmpdir: str) -> str:
         # then audio bytes are fetched directly from the CDN — no Webshare bandwidth used.
         direct_url = _extract_direct_audio_url(source)
         if direct_url:
-            _download_and_convert(direct_url, mp3_path, tmpdir)
-            return mp3_path
-        # URL extraction failed — fall through to original single-step.
-        print("  URL extraction failed — falling back to full yt-dlp download (uses proxy bandwidth).")
+            try:
+                _download_and_convert(direct_url, mp3_path, tmpdir)
+                return mp3_path
+            except Exception as e:
+                # Signed CDN URLs can be IP-bound to the proxy — fall back to full yt-dlp via proxy.
+                print(f"  Direct CDN download failed ({e}) — falling back to full yt-dlp download.")
+        else:
+            print("  URL extraction failed — falling back to full yt-dlp download (uses proxy bandwidth).")
 
     # Original single-step path: yt-dlp handles everything (proxy routes all traffic when set).
     subprocess.run(
