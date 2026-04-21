@@ -619,8 +619,9 @@ def run_detection_background(pending_id: str) -> None:
             log_job(job_id,
                 timestamp     = datetime.utcnow().isoformat(timespec="seconds") + "Z",
                 preacher_name = pending["name"],
-                email         = _mask_email(pending["email"]),
+                email         = pending["email"],
                 source_type   = pending["source_type"],
+                source_url    = pending.get("source_url"),
                 status        = "queued",
                 pdf_name      = None,
                 error_msg     = None,
@@ -731,8 +732,9 @@ def process_sermon(name: str, source: str, email: str,
     log_job(job_id,
         timestamp     = timestamp,
         preacher_name = name,
-        email         = _mask_email(email),
+        email         = email,
         source_type   = source_type,
+        source_url    = source if source_type in {"youtube", "podcast", "url"} and isinstance(source, str) and source.startswith("http") else None,
         status        = "started",
         pdf_name      = None,
         error_msg     = None,
@@ -973,8 +975,9 @@ def submit():
     log_job(job_id,
         timestamp     = datetime.utcnow().isoformat(timespec="seconds") + "Z",
         preacher_name = name,
-        email         = _mask_email(email),
+        email         = email,
         source_type   = source_type,
+        source_url    = source if source_type == "url" else None,
         status        = "queued",
         pdf_name      = None,
         error_msg     = None,
@@ -1107,8 +1110,9 @@ def confirm_segment_post(pending_id: str):
     log_job(job_id,
         timestamp     = datetime.utcnow().isoformat(timespec="seconds") + "Z",
         preacher_name = name,
-        email         = _mask_email(email),
+        email         = email,
         source_type   = source_type,
+        source_url    = pending.get("source_url"),
         status        = "queued",
         pdf_name      = None,
         error_msg     = None,
@@ -1200,6 +1204,8 @@ def admin_status():
             volume_warning = f"Could not read jobs.json: {e}"
 
     jobs = list(reversed(jobs))[:50]
+    for j in jobs:
+        j["email"] = _mask_email(j.get("email", "") or "")
     has_running = any(j.get("status") in {"started", "analyzing"} for j in jobs)
 
     return render_template("admin_status.html",

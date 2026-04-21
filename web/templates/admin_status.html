@@ -71,7 +71,9 @@
           <td>{{ j.get("preacher_name", "—") }}</td>
           <td style="font-size:.85rem;">{{ j.get("email", "—") }}</td>
           <td>
-            {% if j.get("source_type") == "url" %}
+            {% if j.get("source_url") %}
+              <a href="{{ j.get('source_url') }}" target="_blank" class="badge bg-secondary text-decoration-none" title="{{ j.get('source_url') }}">URL</a>
+            {% elif j.get("source_type") == "url" %}
               <span class="badge bg-secondary">URL</span>
             {% else %}
               <span class="badge bg-info text-dark">File</span>
