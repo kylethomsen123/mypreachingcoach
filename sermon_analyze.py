@@ -294,6 +294,12 @@ def acoustic_analysis(mp3_path: str, transcript: str) -> dict:
         "top_fillers":         top_fillers,
         "pause_count":         pause_count,
         "dynamic_range_db":    dynamic_range_db,
+        # NOTE: when dynamic_range_sensor_error=True, the rhetorical_variation
+        # score in the final analysis JSON will be 0 — but this 0 means
+        # "unavailable due to audio fidelity," NOT a real score of 0.
+        # Aggregate dashboards over stored JSON must filter on
+        # dynamic_range_sensor_error=True to distinguish this from genuine zeros
+        # (e.g., pitch_variety=0 when has_audio=False).
         "dynamic_range_sensor_error": dynamic_range_sensor_error,
         "talk_ratio":          round(talk_ratio, 3),
         "pitch_cv":            round(pitch_cv, 3),
