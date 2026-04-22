@@ -94,11 +94,13 @@ def _rmdir_if_detection_tmpdir(directory: Path) -> None:
         pass
 
 
-def _mark_interrupted_jobs() -> None:
-    """On startup, mark any jobs still in 'queued'/'started'/'analyzing' as interrupted.
+def _recover_interrupted_jobs() -> None:
+    """On startup, find jobs killed by a server restart and re-run them.
 
-    These are jobs whose background thread was killed by a server restart mid-flight.
-    Without this, they'd show as 'started' forever with no indication of what happened.
+    A job is "interrupted" if its status is still queued/started/analyzing — the
+    daemon thread died when Railway redeployed. If we have the original URL
+    (source_url, stored since 29b36db), relaunch the analysis in a fresh thread.
+    Otherwise mark as error and send an apology.
     """
     if not JOBS_FILE.exists():
         return
@@ -111,22 +113,48 @@ def _mark_interrupted_jobs() -> None:
             return
 
         interrupted = [j for j in jobs if j.get("status") in {"queued", "started", "analyzing"}]
-        if not interrupted:
-            return
 
-        for job in interrupted:
-            job["status"]    = "error"
-            job["error_msg"] = "Server restarted — job was interrupted before completing"
+    if not interrupted:
+        return
+
+    # Skip anything older than 2h — don't resurrect jobs from days ago.
+    from datetime import timezone, timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
+    def _recent(j):
+        ts = j.get("timestamp", "")
         try:
-            tmp = JOBS_FILE.with_suffix(".tmp")
-            tmp.write_text(json.dumps(jobs, indent=2, default=str))
-            tmp.replace(JOBS_FILE)
-            for job in interrupted:
-                print(f"[startup] Marked job {job.get('job_id','?')[:8]} as interrupted "
-                      f"(preacher={job.get('preacher_name','?')!r}  "
-                      f"email={job.get('email','?')!r})")
-        except OSError as e:
-            print(f"[startup] WARNING: could not write interrupted jobs — {e}")
+            return datetime.fromisoformat(ts.replace("Z", "+00:00")) >= cutoff
+        except (ValueError, AttributeError):
+            return False
+
+    # Defer the import of process_sermon via the module dict — it's defined below this point.
+    # We launch threads here during module import; they'll wait on the GIL until Flask is ready.
+    for job in interrupted:
+        if not _recent(job):
+            job_id = job.get("job_id", "?")
+            print(f"[startup] Skipping stale interrupted job {job_id[:8]} (>2h old)")
+            log_job(job_id, status="error",
+                    error_msg="Server restarted — job was interrupted before completing")
+            continue
+        job_id  = job.get("job_id") or str(uuid.uuid4())
+        name    = job.get("preacher_name", "")
+        email   = job.get("email", "") or ""
+        url     = job.get("source_url") or ""
+        stype   = job.get("source_type", "url")
+
+        if url and url.startswith("http"):
+            print(f"[startup] Recovering job {job_id[:8]} — re-running {name!r} <{email}> {url}")
+            log_job(job_id, status="queued", error_msg="Recovered after server restart")
+            threading.Thread(
+                target=lambda n=name, u=url, e=email, st=stype, jid=job_id: process_sermon(n, u, e, st, None, jid),
+                daemon=True,
+            ).start()
+        else:
+            # File upload or missing URL — can't recover, apologize.
+            print(f"[startup] Cannot recover job {job_id[:8]} ({name!r}) — no URL on record")
+            log_job(job_id, status="error",
+                    error_msg="Server restarted — job was interrupted before completing")
+            send_failure_email(email, name)
 
 
 def _cleanup_stale_pending(max_age_hours: int = 6) -> None:
@@ -163,7 +191,6 @@ def _cleanup_stale_pending(max_age_hours: int = 6) -> None:
               f"({removed_bytes / 1e6:.1f} MB freed)")
 
 
-_mark_interrupted_jobs()      # surface any jobs killed by a prior restart
 _cleanup_stale_pending()      # free disk space from abandoned detection sessions
 
 # ── Email ──────────────────────────────────────────────────────────────────────
@@ -1096,9 +1123,54 @@ def detecting_status(pending_id: str):
         return {"status": "detecting"}
 
 
+def _trim_then_process(name: str, source_url: str, email: str, source_type: str,
+                       orig_path: Optional[str], pending_id: str, job_id: str,
+                       start_sec_req: Optional[int], end_sec_req: Optional[int],
+                       use_full: bool, detected_start: int, detected_end: int):
+    """Daemon-thread wrapper: trim audio if requested, then run process_sermon.
+
+    Moved out of the Flask request handler because ffmpeg on a 60-min file can
+    exceed gunicorn's worker timeout and 500 the response.
+    """
+    if not orig_path or not os.path.exists(orig_path):
+        # Audio missing (detection download failed) — pass URL with time args
+        source    = source_url or orig_path
+        tmp_path  = None
+        start_sec = None if use_full else (start_sec_req if start_sec_req is not None else detected_start)
+        end_sec   = None if use_full else (end_sec_req   if end_sec_req   is not None else detected_end)
+        print(f"[confirm] No local file for {name!r} — passing URL with --start-sec/--end-sec")
+    elif use_full:
+        source    = orig_path
+        tmp_path  = orig_path
+        start_sec = None
+        end_sec   = None
+        print(f"[confirm] {name!r} chose full recording")
+    else:
+        s = start_sec_req if start_sec_req is not None else detected_start
+        e = end_sec_req   if end_sec_req   is not None else detected_end
+        trimmed = f"/tmp/trimmed_{pending_id}.mp3"
+        try:
+            trim_audio(orig_path, s, e, trimmed)
+            if os.path.exists(orig_path):
+                os.remove(orig_path)
+            source    = trimmed
+            tmp_path  = trimmed
+            start_sec = None
+            end_sec   = None
+            print(f"[confirm] Trimmed {name!r}: {s}s–{e}s → {trimmed}")
+        except Exception as _e:
+            print(f"[confirm] Trim failed ({_e}) — using full file")
+            source    = orig_path
+            tmp_path  = orig_path
+            start_sec = None
+            end_sec   = None
+
+    process_sermon(name, source, email, source_type, tmp_path, job_id, start_sec, end_sec)
+
+
 @app.route("/confirm/<pending_id>", methods=["POST"])
 def confirm_segment_post(pending_id: str):
-    """Trim audio to confirmed window and launch full analysis."""
+    """Queue the analysis. Trim happens in the background thread."""
     pending_path = f"/tmp/pending_{pending_id}.json"
     if not os.path.exists(pending_path):
         return render_template("index.html",
@@ -1112,42 +1184,10 @@ def confirm_segment_post(pending_id: str):
     use_full    = request.form.get("use_full", "false") == "true"
     orig_path   = pending.get("tmp_path")
 
-    # By the time we reach confirm, audio is always on disk:
-    # - file uploads: saved during /submit
-    # - URL submissions: downloaded during background detection
-    # In both cases, trim the file directly here.
-    if not orig_path or not os.path.exists(orig_path):
-        # Fallback: audio missing (detection download failed) — pass URL with time args
-        source    = pending.get("source_url", orig_path)
-        tmp_path  = None
-        start_sec = None if use_full else int(request.form.get("start_seconds", pending.get("detected_start", 0)))
-        end_sec   = None if use_full else int(request.form.get("end_seconds",   pending.get("detected_end", 0)))
-        print(f"[confirm] No local file for {name!r} — passing URL with --start-sec/--end-sec")
-    elif use_full:
-        source    = orig_path
-        tmp_path  = orig_path
-        start_sec = None
-        end_sec   = None
-        print(f"[confirm] {name!r} chose full recording")
-    else:
-        start_sec_req = int(request.form.get("start_seconds", pending["detected_start"]))
-        end_sec_req   = int(request.form.get("end_seconds",   pending["detected_end"]))
-        trimmed = f"/tmp/trimmed_{pending_id}.mp3"
-        try:
-            trim_audio(orig_path, start_sec_req, end_sec_req, trimmed)
-            if os.path.exists(orig_path):
-                os.remove(orig_path)
-            source    = trimmed
-            tmp_path  = trimmed
-            start_sec = None
-            end_sec   = None
-            print(f"[confirm] Trimmed {name!r}: {start_sec_req}s–{end_sec_req}s → {trimmed}")
-        except Exception as _e:
-            print(f"[confirm] Trim failed ({_e}) — using full file")
-            source    = orig_path
-            tmp_path  = orig_path
-            start_sec = None
-            end_sec   = None
+    start_sec_req = request.form.get("start_seconds")
+    end_sec_req   = request.form.get("end_seconds")
+    start_sec_req = int(start_sec_req) if start_sec_req not in (None, "") else None
+    end_sec_req   = int(end_sec_req)   if end_sec_req   not in (None, "") else None
 
     job_id = str(uuid.uuid4())
     log_job(job_id,
@@ -1168,12 +1208,14 @@ def confirm_segment_post(pending_id: str):
     if "@" in email:
         send_confirmation_email(email, name)
 
-    thread = threading.Thread(
-        target=process_sermon,
-        args=(name, source, email, source_type, tmp_path, job_id, start_sec, end_sec),
+    threading.Thread(
+        target=_trim_then_process,
+        args=(name, pending.get("source_url"), email, source_type, orig_path,
+              pending_id, job_id, start_sec_req, end_sec_req, use_full,
+              int(pending.get("detected_start", 0)),
+              int(pending.get("detected_end",   0))),
         daemon=True,
-    )
-    thread.start()
+    ).start()
     return redirect(url_for("submitted"))
 
 
@@ -1323,6 +1365,11 @@ def admin_status():
     return render_template("admin_status.html",
         jobs=jobs, has_running=has_running,
         volume_warning=volume_warning, admin_key=admin_key)
+
+
+# ── Startup recovery ───────────────────────────────────────────────────────────
+# Run AFTER process_sermon and send_failure_email are defined.
+_recover_interrupted_jobs()
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
