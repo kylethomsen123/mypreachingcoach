@@ -1291,8 +1291,13 @@ def admin_digest():
     except (json.JSONDecodeError, OSError) as e:
         return f"Could not read jobs.json: {e}", 500
 
+    # Only include failures we haven't already reported. Each failure is marked
+    # digest_reported=true the first time it shows up in a digest, so repeated
+    # calls to this endpoint are silent instead of spamming the same list.
     failed = []
     for j in jobs:
+        if j.get("status") != "error": continue
+        if j.get("digest_reported"):   continue
         ts = j.get("timestamp", "")
         if not ts: continue
         try:
@@ -1300,11 +1305,10 @@ def admin_digest():
         except ValueError:
             continue
         if job_time < cutoff: continue
-        if j.get("status") == "error":
-            failed.append(j)
+        failed.append(j)
 
     if not failed:
-        return "No failures in the last 24h. (No email sent.)", 200
+        return "No new failures to report. (No email sent.)", 200
 
     notify = os.getenv("NOTIFY_EMAIL", "")
     if not notify:
@@ -1334,7 +1338,11 @@ def admin_digest():
     except Exception as e:
         return f"{len(failed)} failures — email send FAILED: {e}", 500
 
-    return f"Digest sent to {notify} — {len(failed)} failure(s).", 200
+    # Mark reported so they don't show up again.
+    for j in failed:
+        log_job(j.get("job_id", ""), digest_reported=True)
+
+    return f"Digest sent to {notify} — {len(failed)} new failure(s).", 200
 
 
 @app.route("/admin/status")
