@@ -524,13 +524,14 @@ class SermonPDF(FPDF):
 
     Page 1 -- Cover        : sermon title, score badges, big idea,
                              bottom line, encouragement, growth edges
-    Page 2 -- Structure    : ME / WE / GOD / YOU / WE section cards with
-                             colored bands, score bars, quotes, summary,
-                             strength, growth edge (never truncated)
+    Page 2 -- 5 P's        : Personal Connection, Problem Naming,
+                             Proclamation, Practical Step, Picture of Change
+                             (colored bands, score bars, narrative,
+                             transcript ref, suggestion, coaching question)
     Page 3 -- Vocal        : 6 acoustic/rhetorical elements, score bars,
                              measurement lines, full coaching notes
-    Page 4 -- Gospel Check : Gold Standard badge, GOSPEL scoring table
-                             (G/O/S/P/E/L), rubric subtotals, manual blanks
+    Page 4 -- Gospel Check : Gold Standard badge, pass/fail checklist,
+                             rubric subtotals, manual blanks
     Page 5 -- Scorecard    : all scores at a glance, coaching priorities
     """
 

@@ -30,9 +30,10 @@ It transcribes a sermon (from YouTube URL or local file), analyzes acoustics, an
 - **Evaluation:** Claude API (`claude-sonnet-4-6`)
 - **Output:** PDF emailed via SendGrid
 
-### CLI (`sermon_analyze.py`) — secondary/testing tool
-- Location: `~/Desktop/MyPreachingCoach/sermon_analyze.py`
-- Same analysis logic as web app, runs locally
+### CLI (`sermon_analyze.py`) — reference copy, not actively used
+- Repo copy at `sermon_analyze.py` (root); deployed copy at `web/sermon_analyze.py`
+- The two files must stay in sync for any report-logic change
+- Kyle does not run the CLI locally — the web app is the only live workflow
 
 ---
 
