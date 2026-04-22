@@ -85,6 +85,67 @@ def _mask_email(email: str) -> str:
     return local[0] + "***@" + domain
 
 
+# ── Submission validators ─────────────────────────────────────────────────────
+_PLACEHOLDER_NAMES = {"n/a", "na", "n.a.", "none", "unknown", "test", "xxx", "asdf"}
+
+
+def _validate_preacher_name(name: str) -> str | None:
+    """Return an error message if the name looks like a placeholder, else None.
+
+    Across 62 beta reports, 8 shipped with bad names: 'N/a' x2, 'AY', 'tj', bare
+    'Ray' x4, bare 'John'. Rules: reject <4 chars, reject placeholder tokens,
+    require a first-and-last (at least one space).
+    """
+    stripped = name.strip()
+    if len(stripped) < 4:
+        return "Please enter the preacher's full name (first and last)."
+    if stripped.lower() in _PLACEHOLDER_NAMES:
+        return "Please enter the preacher's full name (first and last)."
+    if " " not in stripped:
+        return "Please enter the preacher's full name — first and last."
+    return None
+
+
+def _find_recent_duplicate(email: str, dedupe_key: str,
+                           source_type: str,
+                           within_hours: int = 24) -> dict | None:
+    """Return the matching recent job if this email+source was submitted recently.
+
+    Dedupe key is `source_url` for URL submissions and `original_filename` for
+    file uploads. Catches: same-URL re-submission (Carla Hairston case), typo
+    correction on the same uploaded file (Phillip Hale / Phillip Hald case).
+    Does NOT catch cross-source re-submission (Melissa Wall case) — that needs
+    content hashing, deferred to a later pass.
+    """
+    if not JOBS_FILE.exists() or not email or not dedupe_key:
+        return None
+    from datetime import timezone, timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=within_hours)
+    try:
+        jobs = json.loads(JOBS_FILE.read_text())
+        if not isinstance(jobs, list):
+            return None
+    except (json.JSONDecodeError, OSError):
+        return None
+    email_lower = email.lower()
+    field = "source_url" if source_type == "url" else "original_filename"
+    for job in reversed(jobs):
+        if (job.get("email") or "").lower() != email_lower:
+            continue
+        if job.get(field) != dedupe_key:
+            continue
+        try:
+            ts = job.get("timestamp", "")
+            if ts.endswith("Z"):
+                ts = ts[:-1] + "+00:00"
+            if datetime.fromisoformat(ts) < cutoff:
+                continue
+        except (ValueError, TypeError):
+            continue
+        return job
+    return None
+
+
 def _rmdir_if_detection_tmpdir(directory: Path) -> None:
     """Remove directory if it was a detection tmpdir and is now empty."""
     try:
@@ -925,15 +986,19 @@ def index():
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    name        = request.form.get("name", "").strip()
-    email       = request.form.get("email", "").strip()
-    source_type = request.form.get("source_type", "url")
+    name              = request.form.get("name", "").strip()
+    email             = request.form.get("email", "").strip()
+    source_type       = request.form.get("source_type", "url")
+    original_filename = None   # set inside the file-upload branch; used for dedupe + logging
 
     # ── Validate required fields ──────────────────────────────────────────────
     if not name:
         return render_template("index.html", error="Please enter the preacher's name.")
     if not email:
         return render_template("index.html", error="Please enter an email address.")
+    _name_err = _validate_preacher_name(name)
+    if _name_err:
+        return render_template("index.html", error=_name_err)
 
     # ── Resolve source (URL or uploaded file) ─────────────────────────────────
     tmp_path = None
@@ -950,6 +1015,13 @@ def submit():
                 error="We can only analyze YouTube links right now (youtube.com or youtu.be). "
                       "If your sermon is on Spotify, Vimeo, or your church's site, please upload "
                       "the audio file directly instead.")
+
+        # Dedupe: block a resubmission of the same URL by the same email within 24h.
+        if _find_recent_duplicate(email, source, "url"):
+            return render_template("index.html",
+                error="Looks like you submitted this same sermon in the last 24 hours. "
+                      "Your previous report should arrive shortly — if it didn't, "
+                      "please check your inbox or spam folder, or wait 24 hours before retrying.")
 
         # ── [SERMON_DETECTION] Probe URL duration, launch async detection ───
         if os.getenv("SERMON_DETECTION", "").lower() == "true":
@@ -996,6 +1068,15 @@ def submit():
                       f"Accepted formats: mp3, mp4, m4a, wav, flac, aac, ogg.",
             )
 
+        original_filename = file.filename
+
+        # Dedupe: same email uploaded this same filename in the last 24h.
+        if _find_recent_duplicate(email, original_filename, "file"):
+            return render_template("index.html",
+                error="Looks like you uploaded this same file in the last 24 hours. "
+                      "Your previous report should arrive shortly — if it didn't, "
+                      "please check your inbox or spam folder, or wait 24 hours before retrying.")
+
         timestamp    = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         tmp_filename = f"upload_{timestamp}{ext}"
         tmp_path     = f"/tmp/{tmp_filename}"
@@ -1015,17 +1096,18 @@ def submit():
                 print(f"[detection] File is {duration/60:.1f} min — launching diarization")
                 pending_id = str(uuid.uuid4())
                 pending    = {
-                    "name":           name,
-                    "email":          email,
-                    "tmp_path":       tmp_path,
-                    "source_type":    source_type,
-                    "mode":           "file",
-                    "total_duration": duration,
-                    "status":         "detecting",
-                    "detected_start": None,
-                    "detected_end":   None,
-                    "confidence":     None,
-                    "reasoning":      None,
+                    "name":              name,
+                    "email":             email,
+                    "tmp_path":          tmp_path,
+                    "source_type":       source_type,
+                    "mode":              "file",
+                    "original_filename": original_filename,
+                    "total_duration":    duration,
+                    "status":            "detecting",
+                    "detected_start":    None,
+                    "detected_end":      None,
+                    "confidence":        None,
+                    "reasoning":         None,
                 }
                 with open(f"/tmp/pending_{pending_id}.json", "w") as _f:
                     json.dump(pending, _f)
@@ -1043,15 +1125,16 @@ def submit():
     # and kills the daemon thread before it can write its own first log entry.
     job_id = str(uuid.uuid4())
     log_job(job_id,
-        timestamp     = datetime.utcnow().isoformat(timespec="seconds") + "Z",
-        preacher_name = name,
-        email         = email,
-        source_type   = source_type,
-        source_url    = source if source_type == "url" else None,
-        status        = "queued",
-        pdf_name      = None,
-        error_msg     = None,
-        duration_sec  = None,
+        timestamp         = datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        preacher_name     = name,
+        email             = email,
+        source_type       = source_type,
+        source_url        = source if source_type == "url" else None,
+        original_filename = original_filename,
+        status            = "queued",
+        pdf_name          = None,
+        error_msg         = None,
+        duration_sec      = None,
     )
     print(f"[submit] Queued job {job_id[:8]}  preacher={name!r}  email={email!r}")
 
@@ -1191,15 +1274,16 @@ def confirm_segment_post(pending_id: str):
 
     job_id = str(uuid.uuid4())
     log_job(job_id,
-        timestamp     = datetime.utcnow().isoformat(timespec="seconds") + "Z",
-        preacher_name = name,
-        email         = email,
-        source_type   = source_type,
-        source_url    = pending.get("source_url"),
-        status        = "queued",
-        pdf_name      = None,
-        error_msg     = None,
-        duration_sec  = None,
+        timestamp         = datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        preacher_name     = name,
+        email             = email,
+        source_type       = source_type,
+        source_url        = pending.get("source_url"),
+        original_filename = pending.get("original_filename"),
+        status            = "queued",
+        pdf_name          = None,
+        error_msg         = None,
+        duration_sec      = None,
     )
     print(f"[confirm] Queued job {job_id[:8]}  preacher={name!r}  email={email!r}")
     if os.path.exists(pending_path):
