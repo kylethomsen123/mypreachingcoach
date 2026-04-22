@@ -106,6 +106,14 @@ def _validate_preacher_name(name: str) -> str | None:
     return None
 
 
+# Dedupe only blocks on statuses where the prior submission is either still
+# running (would flood resources if re-submitted) or already produced a PDF
+# (user has or will get the report). Failed / errored jobs should NOT block
+# a retry — Chris Rich case, 2026-04-22: 4 failed submissions blocked the
+# user from retrying because the new dedupe counted errored jobs as duplicates.
+_DEDUPE_BLOCKING_STATUSES = {"queued", "started", "analyzing", "pdf_ready", "email_sent"}
+
+
 def _find_recent_duplicate(email: str, dedupe_key: str,
                            source_type: str,
                            within_hours: int = 24) -> dict | None:
@@ -116,6 +124,9 @@ def _find_recent_duplicate(email: str, dedupe_key: str,
     correction on the same uploaded file (Phillip Hale / Phillip Hald case).
     Does NOT catch cross-source re-submission (Melissa Wall case) — that needs
     content hashing, deferred to a later pass.
+
+    Prior jobs with status=error / email_failed do NOT block; the user is
+    trying to recover from a failure and should be allowed to retry.
     """
     if not JOBS_FILE.exists() or not email or not dedupe_key:
         return None
@@ -133,6 +144,8 @@ def _find_recent_duplicate(email: str, dedupe_key: str,
         if (job.get("email") or "").lower() != email_lower:
             continue
         if job.get(field) != dedupe_key:
+            continue
+        if job.get("status") not in _DEDUPE_BLOCKING_STATUSES:
             continue
         try:
             ts = job.get("timestamp", "")
