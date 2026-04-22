@@ -231,6 +231,9 @@ def acoustic_analysis(mp3_path: str, transcript: str) -> dict:
     peak = float(np.max(np.abs(y))) + 1e-10
     db   = 20.0 * np.log10(np.abs(y.astype(np.float64)) / peak + 1e-10)
     dynamic_range_db = round(float(np.percentile(db, 95)) - float(np.percentile(db, 5)), 1)
+    # Human speech dynamic range is ~40-60 dB; >70 dB indicates clipping,
+    # compression artifacts, or a podcast-feed export — not a real reading.
+    dynamic_range_sensor_error = dynamic_range_db > 70
 
     print("  Estimating pitch variation ...")
     pitch_cv = _pitch_cv(y, sr)
@@ -291,16 +294,19 @@ def acoustic_analysis(mp3_path: str, transcript: str) -> dict:
         "top_fillers":         top_fillers,
         "pause_count":         pause_count,
         "dynamic_range_db":    dynamic_range_db,
+        "dynamic_range_sensor_error": dynamic_range_sensor_error,
         "talk_ratio":          round(talk_ratio, 3),
         "pitch_cv":            round(pitch_cv, 3),
         "arc_pattern":         arc_pattern,
         "arc_thirds":          {"start": round(e1,4), "middle": round(e2,4), "end": round(e3,4)},
         "wpm_score":           s_wpm(wpm),
         "filler_score":        s_fpm(filler_per_min),
-        "dynamic_range_score": s_dr(dynamic_range_db),
-        "pause_score":         s_pause(pause_count, dur_min),
+        "dynamic_range_score": None if dynamic_range_sensor_error else s_dr(dynamic_range_db),
+        # TODO: re-enable after metric recalibration — see meta-analysis
+        # "pause_score":         s_pause(pause_count, dur_min),
         "vocal_variety_score": s_variety(pitch_cv),
-        "talk_silence_score":  s_tts(talk_ratio),
+        # TODO: re-enable after metric recalibration — see meta-analysis
+        # "talk_silence_score":  s_tts(talk_ratio),
         "energy_arc_score":    s_arc(arc_pattern),
     }
 
@@ -334,9 +340,8 @@ SPEAKER: {speaker}
 SERMON TYPE: {sermon_type}
 TYPE CONTEXT: {sermon_type_instructions}
 DURATION: {duration_min} min  |  WPM: {estimated_wpm}  |  FILLERS: {filler_count} total ({filler_per_minute}/min)
-PAUSES: {pause_count}  |  DYNAMIC RANGE: {dynamic_range_db} dB  |  PITCH CV: {pitch_cv:.3f}
-TALK RATIO: {talk_ratio_pct}%  |  ENERGY ARC: {arc_pattern}
-AUDIO AVAILABLE: {has_audio}{has_audio_note}
+DYNAMIC RANGE: {dynamic_range_db} dB  |  PITCH CV: {pitch_cv:.3f}  |  ENERGY ARC: {arc_pattern}
+AUDIO AVAILABLE: {has_audio}{has_audio_note}{sensor_error_note}
 
 TRANSCRIPT:
 {transcript}
@@ -363,9 +368,7 @@ Return this exact JSON (no extra keys):
     "filler_words":             {{"count":{filler_count},"per_minute":{filler_per_minute},"examples":["<word1>","<word2>","<word3>"],"score":0,"notes":"<1-2 sentence coaching note>"}},
     "pace":                     {{"avg_wpm":{estimated_wpm},"assessment":"fast|ideal|slow","score":0,"notes":"<1-2 sentences>"}},
     "rhetorical_variation":     {{"score":0,"db":{dynamic_range_db},"notes":"<1-2 sentences on volume range and expressiveness>"}},
-    "landing_space":            {{"score":0,"count":{pause_count},"avg_duration_sec":0.5,"notes":"<1-2 sentences on pause quality and placement>"}},
     "pitch_variety":            {{"score":0,"notes":"<1-2 sentences on pitch variation (cv={pitch_cv:.3f})>"}},
-    "cognitive_breathing_room": {{"score":0,"talk_pct":{talk_ratio_pct},"notes":"<1-2 sentences on talk-to-silence balance>"}},
     "rhetorical_arc":           {{"score":0,"notes":"<1-2 sentences on arc pattern: {arc_pattern}>"}},
     "verbal_clarity":           {{"score":0,"notes":"<1-2 sentences on word choice, sentence complexity, and clarity of expression>"}}
   }},
@@ -432,9 +435,7 @@ Vocal score guide (use acoustic measurements above):
 filler:       <0.5/min=10, <1.0=8, <2.0=6, <3.5=4, else 2
 pace:         130-165wpm=10, 120-180=8, 100-200=6, else lower
 rhetorical_variation (dynamic range): >=35dB=10, >=28=8, >=20=6, >=14=4, else 2
-landing_space (pauses): 2-6/min=10, 1-9/min=7, else 5
 pitch_variety:cv>=0.28=10, >=0.20=8, >=0.12=6, >=0.06=4, else 2{pitch_variety_note}
-cognitive_breathing_room (talk ratio): 78-92%=10, 70-96%=7, else 4
 rhetorical_arc:   building=10, recovery=8, peaks-middle=6, declining=4
 verbal_clarity:   Score 1-10 based on word choice simplicity, sentence length, jargon avoidance,
                   and how accessible the language is to a general audience.
@@ -446,6 +447,11 @@ exegesis_theology: context_set=historical/cultural context set; main_point_clear
 application: clear_helpful_application=practical steps; gospel_centered=flows from grace not law;
   clear_response=listener knows what to do; heart_care=addresses motivations; nonchristian_friendly=accessible to skeptic
 presentation: engaging_intro=hook earns attention; clear_structure=logical flow; voice_inflection=varied delivery
+
+CONSTRAINTS ON LANGUAGE (apply to every narrative, note, growth edge, encouragement, suggestion, and coaching_question field — not to numeric scores):
+- Do NOT use the phrases: "energy arc is declining", "pausing instead of filling", or "would strengthen the expository integrity". These phrases have become overused across previous reports.
+- Write each growth edge in language specific to this sermon. Reference a concrete moment, illustration, or phrase the preacher actually used.
+- Avoid stock preaching-coach vocabulary unless it's the most precise word available.
 """
 
 
@@ -462,6 +468,17 @@ def evaluate_with_claude(transcript: str, speaker: str, acoustic: dict,
         "\n                  (Not available -- no audio file)"
         if not has_audio else ""
     )
+    sensor_error_note = (
+        f"\nSENSOR ERROR: the measured dynamic range of {acoustic['dynamic_range_db']} dB "
+        "exceeds 70 dB, which is physically impossible for human speech and indicates an "
+        "audio-fidelity issue (clipping, extreme compression, or a podcast-feed export). "
+        "For the rhetorical_variation field ONLY: set score to 0, and in notes write ONE "
+        "sentence stating that audio fidelity prevented reliable measurement of this "
+        "dimension and suggesting the user check for clipping, extreme compression, or a "
+        "podcast-feed export as the likely cause. Do not narrate a strength or cite the dB "
+        "number. All other vocal elements should be scored normally."
+        if acoustic.get("dynamic_range_sensor_error") else ""
+    )
     prompt = CLAUDE_PROMPT.format(
         transcript=transcript[:40000],
         speaker=speaker,
@@ -472,14 +489,13 @@ def evaluate_with_claude(transcript: str, speaker: str, acoustic: dict,
         has_audio=has_audio,
         has_audio_note=has_audio_note,
         pitch_variety_note=pitch_variety_note,
+        sensor_error_note=sensor_error_note,
         duration_min=acoustic["duration_min"],
         estimated_wpm=acoustic["estimated_wpm"],
         filler_count=acoustic["filler_count"],
         filler_per_minute=acoustic["filler_per_minute"],
         dynamic_range_db=acoustic["dynamic_range_db"],
-        pause_count=acoustic["pause_count"],
         pitch_cv=acoustic["pitch_cv"],
-        talk_ratio_pct=round(acoustic["talk_ratio"] * 100),
         arc_pattern=acoustic["arc_pattern"],
     )
     msg = client.messages.create(
@@ -511,7 +527,7 @@ class SermonPDF(FPDF):
     Page 2 -- Structure    : ME / WE / GOD / YOU / WE section cards with
                              colored bands, score bars, quotes, summary,
                              strength, growth edge (never truncated)
-    Page 3 -- Vocal        : 8 acoustic/rhetorical elements, score bars,
+    Page 3 -- Vocal        : 6 acoustic/rhetorical elements, score bars,
                              measurement lines, full coaching notes
     Page 4 -- Gospel Check : Gold Standard badge, GOSPEL scoring table
                              (G/O/S/P/E/L), rubric subtotals, manual blanks
@@ -939,11 +955,11 @@ class SermonPDF(FPDF):
         self._top_bar(f"Page {self.page_no()}")
         if has_audio:
             self._page_title(
-                "Vocal Delivery -- 8 Elements (measured from audio)"
+                "Vocal Delivery -- 6 Elements (measured from audio)"
             )
         else:
             self._page_title(
-                "Rhetorical Delivery -- 8 Elements (transcript analysis)"
+                "Rhetorical Delivery -- 6 Elements (transcript analysis)"
             )
 
         # Italic disclaimer subheader
@@ -977,7 +993,13 @@ class SermonPDF(FPDF):
         elif wpm <= 170: pace_desc = "ideal"
         else:            pace_desc = "fast"
 
-        # Each tuple: (display name, score, [italic measurement lines], coaching note)
+        rv_sensor_error = a.get("dynamic_range_sensor_error", False)
+        rv_score = (va.get("rhetorical_variation", {}).get("score", 0)
+                    if rv_sensor_error else
+                    va.get("rhetorical_variation", {}).get(
+                        "score", a["dynamic_range_score"] or 0))
+
+        # Each tuple: (display name, score, [italic measurement lines], coaching note, unavailable)
         elements = [
             (
                 "1. Filler Words",
@@ -989,70 +1011,90 @@ class SermonPDF(FPDF):
                     f"Most frequent: {tops}",
                 ],
                 va.get("filler_words", {}).get("notes", ""),
+                False,
             ),
             (
-                "2. Words Per Minute (Pace)",
+                "2. Pace",
                 va.get("pace", {}).get("score", a["wpm_score"]),
                 [f"Measured: {wpm} wpm  ({pace_desc} -- ideal: 130-170 wpm)"
                  "  (High confidence)"],
                 va.get("pace", {}).get("notes", ""),
+                False,
             ),
             (
                 "3. Rhetorical Variation",
-                va.get("rhetorical_variation", {}).get("score",
-                    a["dynamic_range_score"]),
+                rv_score,
                 [f"Measured: {a['dynamic_range_db']} dB variation"
                  + ("  (High confidence)" if has_audio
                     else "  (Not available -- no audio)")],
                 va.get("rhetorical_variation", {}).get("notes", ""),
+                rv_sensor_error,
             ),
             (
-                "4. Landing Space",
-                va.get("landing_space", {}).get("score", a["pause_score"]),
-                [f"Measured: {a['pause_count']} pauses  "
-                 f"({a['pause_count'] / dur:.1f}/min)"
-                 + ("  (High confidence)" if has_audio
-                    else "  (Estimated from transcript)")],
-                va.get("landing_space", {}).get("notes", ""),
-            ),
-            (
-                "5. Vocal Variety / Pitch Range",
+                "4. Pitch Variety",
                 va.get("pitch_variety", {}).get("score", a["vocal_variety_score"])
                     if has_audio else 0,
                 [] if has_audio else ["Not scored -- no audio file"],
                 va.get("pitch_variety", {}).get("notes", "")
                     if has_audio else "Pitch analysis requires audio.",
+                False,
             ),
             (
-                "6. Cognitive Breathing Room",
-                va.get("cognitive_breathing_room", {}).get("score",
-                    a["talk_silence_score"]),
-                [f"Measured: {pct}% speaking time  (ideal: 82-93%)"
-                 + ("  (High confidence)" if has_audio
-                    else "  (Estimated from transcript)")],
-                va.get("cognitive_breathing_room", {}).get("notes", ""),
-            ),
-            (
-                "7. Rhetorical Arc",
+                "5. Rhetorical Arc",
                 va.get("rhetorical_arc", {}).get("score", a["energy_arc_score"]),
                 [f"Pattern: {a['arc_pattern']}"
                  + ("  (High confidence)" if has_audio
                     else "  (Estimated from transcript)")],
                 va.get("rhetorical_arc", {}).get("notes", ""),
+                False,
             ),
             (
-                "8. Verbal Clarity",
+                "6. Verbal Clarity",
                 va.get("verbal_clarity", {}).get("score", 0),
                 ["Derived from transcript analysis  (High confidence)"],
                 va.get("verbal_clarity", {}).get("notes", ""),
+                False,
             ),
         ]
 
-        scores = []
-        for name, score, meas_lines, note in elements:
+        counted_scores = []
+        for name, score, meas_lines, note, unavailable in elements:
             self._check_page(35)   # new page if < 35 mm remain
 
-            scores.append(score)
+            if unavailable:
+                # Unavailable row: name + status label, single-line explanation, no bar, no score.
+                self.set_x(self.M)
+                self.set_font("Helvetica", "B", 11)
+                self.set_text_color(*C_NAVY)
+                self.cell(self.CW - 60, 7, safe(name))
+                self.set_text_color(*C_DGRAY)
+                self.set_font("Helvetica", "", 9)
+                self.cell(60, 7, safe("Unavailable (audio fidelity issue)"),
+                          align="R", new_x="LMARGIN", new_y="NEXT")
+                self.set_text_color(0, 0, 0)
+                # One-line explanation
+                self.set_x(self.M)
+                self.set_font("Helvetica", "I", 9)
+                self.set_text_color(*C_DGRAY)
+                self.multi_cell(self.CW, 5, safe(
+                    f"Measured {a['dynamic_range_db']} dB -- exceeds the "
+                    "human-speech range (~40-60 dB), indicating clipping, "
+                    "extreme compression, or a podcast-feed export. "
+                    "Score omitted from this report."
+                ))
+                self.set_text_color(0, 0, 0)
+                # Claude's one-sentence note, if present
+                if note:
+                    self.set_x(self.M)
+                    self.set_font("Helvetica", "", 10)
+                    self.multi_cell(self.CW, 6, safe(note))
+                self.ln(3)
+                continue
+
+            # Don't let pitch-no-audio contribute to the average
+            if has_audio or "Pitch" not in name:
+                counted_scores.append(score)
+
             sc_col    = C_GREEN if score >= 8 else (C_RED if score <= 4 else self.ORANGE)
             benchmark = get_benchmark_label(score)
 
@@ -1089,10 +1131,7 @@ class SermonPDF(FPDF):
 
             self.ln(3)
 
-        # Delivery average (skip pitch score if no audio)
-        counted = [s for s, (n, _, _, _) in zip(scores, elements)
-                   if has_audio or "Pitch Range" not in n]
-        avg = round(sum(counted) / len(counted), 1) if counted else 0.0
+        avg = round(sum(counted_scores) / len(counted_scores), 1) if counted_scores else 0.0
         self._rule(gap_before=0, gap_after=3)
         self.set_x(self.M)
         self.set_font("Helvetica", "B", 10)
@@ -1261,7 +1300,7 @@ class SermonPDF(FPDF):
 
     # ── Page 5: Scorecard ─────────────────────────────────────────────────────
 
-    def page5(self, analysis: dict, gospel_check: dict):
+    def page5(self, analysis: dict, gospel_check: dict, acoustic: dict):
         self.add_page()
         self._top_bar(f"Page {self.page_no()}")
         self._page_title("Scorecard -- All Scores at a Glance")
@@ -1325,27 +1364,30 @@ class SermonPDF(FPDF):
         self.set_text_color(0, 0, 0)
 
         va = ev.get("vocal", {})
+        rv_unavailable = acoustic.get("dynamic_range_sensor_error", False)
         vocal_items = [
-            ("Filler Words",             va.get("filler_words",            {}).get("score", 0)),
-            ("Pace (WPM)",               va.get("pace",                    {}).get("score", 0)),
-            ("Rhetorical Variation",     va.get("rhetorical_variation",    {}).get("score", 0)),
-            ("Landing Space",            va.get("landing_space",           {}).get("score", 0)),
-            ("Vocal Variety / Pitch",    va.get("pitch_variety",           {}).get("score", 0)),
-            ("Cognitive Breathing Room", va.get("cognitive_breathing_room",{}).get("score", 0)),
-            ("Rhetorical Arc",           va.get("rhetorical_arc",          {}).get("score", 0)),
-            ("Verbal Clarity",           va.get("verbal_clarity",          {}).get("score", 0)),
+            ("Filler Words",         va.get("filler_words",         {}).get("score", 0), False),
+            ("Pace",                 va.get("pace",                 {}).get("score", 0), False),
+            ("Rhetorical Variation", va.get("rhetorical_variation", {}).get("score", 0), rv_unavailable),
+            ("Pitch Variety",        va.get("pitch_variety",        {}).get("score", 0), False),
+            ("Rhetorical Arc",       va.get("rhetorical_arc",       {}).get("score", 0), False),
+            ("Verbal Clarity",       va.get("verbal_clarity",       {}).get("score", 0), False),
         ]
 
-        for vname, vscore in vocal_items:
-            bench  = get_benchmark_label(vscore)
-            sc_col = C_GREEN if vscore >= 8 else (C_RED if vscore <= 4 else self.ORANGE)
+        for vname, vscore, unavailable in vocal_items:
+            if unavailable:
+                bench  = "Unavailable"
+                sc_col = C_DGRAY
+            else:
+                bench  = get_benchmark_label(vscore)
+                sc_col = C_GREEN if vscore >= 8 else (C_RED if vscore <= 4 else self.ORANGE)
 
             self.set_x(self.M)
             self.set_font("Helvetica", "", 9)
             self.cell(lw, 5, safe(vname))
             self.set_text_color(*sc_col)
             self.set_font("Helvetica", "B", 9)
-            self.cell(16, 5, f"{vscore}/10", align="R")
+            self.cell(16, 5, "N/A" if unavailable else f"{vscore}/10", align="R")
             self.set_text_color(*C_DGRAY)
             self.set_font("Helvetica", "", 8)
             self.cell(16, 5, safe(bench), align="R",
@@ -1445,7 +1487,7 @@ def build_pdf(speaker: str, source_label: str, acoustic: dict,
     pdf.page2(analysis)
     pdf.page3(acoustic, analysis.get("vocal", {}))
     pdf.page4(gospel_check, analysis.get("rubric", {}))
-    pdf.page5(analysis, gospel_check)
+    pdf.page5(analysis, gospel_check, acoustic)
     pdf.output(out_path)
 
 
