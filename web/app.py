@@ -1268,6 +1268,31 @@ def admin_resend():
     return form
 
 
+@app.route("/admin/mark-all-reported")
+def admin_mark_all_reported():
+    """One-shot: mark every existing error as already-reported in the digest.
+
+    Used to suppress the next digest after a burst of test runs or a fix that
+    resolved historical failures. Idempotent.
+    """
+    admin_key = os.getenv("ADMIN_KEY", "")
+    if request.args.get("key") != admin_key or not admin_key:
+        return "Unauthorized", 403
+    if not JOBS_FILE.exists():
+        return "No jobs.json", 200
+    with _jobs_lock:
+        jobs = json.loads(JOBS_FILE.read_text())
+        n = 0
+        for j in jobs:
+            if j.get("status") == "error" and not j.get("digest_reported"):
+                j["digest_reported"] = True
+                n += 1
+        tmp = JOBS_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(jobs, indent=2, default=str))
+        tmp.replace(JOBS_FILE)
+    return f"Marked {n} error(s) as already-reported.", 200
+
+
 @app.route("/admin/digest")
 def admin_digest():
     """Daily failure digest — emails Kyle a summary of failed jobs in the last 24h.
