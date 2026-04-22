@@ -210,6 +210,40 @@ _FEEDBACK_URL = (
 )
 
 
+def send_failure_email(to_email: str, preacher_name: str):
+    """Send an apology + resubmit link when a job fails. Non-blocking."""
+    import sendgrid as sg_module
+    from sendgrid.helpers.mail import Mail
+
+    api_key    = os.getenv("SENDGRID_API_KEY", "")
+    from_email = os.getenv("FROM_EMAIL", "")
+    if not api_key or not from_email or "@" not in (to_email or ""):
+        return
+
+    greeting = f"Hey {preacher_name}," if preacher_name else "Hey there,"
+    body = (
+        f"{greeting}\n\n"
+        "Something went wrong on our end and your sermon report didn't make it "
+        "through. That's why I'm a pastor, not a programmer.\n\n"
+        "Could you resubmit at https://www.mypreachingcoach.org ? It should run "
+        "cleanly this time.\n\n"
+        "If it fails again, just reply to this email and I'll look into it.\n\n"
+        "Kyle Thomsen\n"
+        "MyPreachingCoach\n"
+    )
+
+    try:
+        client = sg_module.SendGridAPIClient(api_key)
+        resp   = client.send(Mail(
+            from_email=from_email, to_emails=to_email,
+            subject="Sorry — your sermon report didn't go through",
+            plain_text_content=body,
+        ))
+        print(f"[failure_email] Sent to {to_email} — HTTP {resp.status_code}")
+    except Exception as e:
+        print(f"[failure_email] FAILED sending apology to {to_email}: {e}")
+
+
 def send_report_email(to_email: str, preacher_name: str, pdf_path: str,
                       sermon_title: str = ""):
     """Send the finished PDF report via SendGrid."""
@@ -840,6 +874,7 @@ def process_sermon(name: str, source: str, email: str,
             duration_sec = round(time.monotonic() - start_time, 1),
         )
         print("[job] ERROR: Analysis timed out after 30 minutes.")
+        send_failure_email(email, name)
     except Exception as exc:
         log_job(job_id,
             status       = "error",
@@ -847,6 +882,7 @@ def process_sermon(name: str, source: str, email: str,
             duration_sec = round(time.monotonic() - start_time, 1),
         )
         print(f"[job] ERROR: {exc}")
+        send_failure_email(email, name)
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -880,6 +916,13 @@ def submit():
         source = normalize_youtube_url(request.form.get("url", "").strip())
         if not source:
             return render_template("index.html", error="Please enter a YouTube or podcast URL.")
+        # Only YouTube is supported today. Reject other hosts up front instead of failing 3 min in.
+        _host = source.split("://", 1)[-1].split("/", 1)[0].lower()
+        if not any(_host.endswith(d) for d in ("youtube.com", "youtu.be", "www.youtube.com", "m.youtube.com")):
+            return render_template("index.html",
+                error="We can only analyze YouTube links right now (youtube.com or youtu.be). "
+                      "If your sermon is on Spotify, Vimeo, or your church's site, please upload "
+                      "the audio file directly instead.")
 
         # ── [SERMON_DETECTION] Probe URL duration, launch async detection ───
         if os.getenv("SERMON_DETECTION", "").lower() == "true":
@@ -1181,6 +1224,75 @@ def admin_resend():
     </form>
     </body></html>"""
     return form
+
+
+@app.route("/admin/digest")
+def admin_digest():
+    """Daily failure digest — emails Kyle a summary of failed jobs in the last 24h.
+
+    Silent when zero failures. Meant to be hit by a scheduler (cron/GitHub Action)
+    once per day. Returns plain text so the scheduler's log is useful too.
+    """
+    admin_key = os.getenv("ADMIN_KEY", "")
+    if request.args.get("key") != admin_key or not admin_key:
+        return "Unauthorized", 403
+
+    from datetime import timezone, timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+
+    if not JOBS_FILE.exists():
+        return "No jobs.json found — nothing to digest.", 200
+
+    try:
+        with _jobs_lock:
+            jobs = json.loads(JOBS_FILE.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        return f"Could not read jobs.json: {e}", 500
+
+    failed = []
+    for j in jobs:
+        ts = j.get("timestamp", "")
+        if not ts: continue
+        try:
+            job_time = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if job_time < cutoff: continue
+        if j.get("status") == "error":
+            failed.append(j)
+
+    if not failed:
+        return "No failures in the last 24h. (No email sent.)", 200
+
+    notify = os.getenv("NOTIFY_EMAIL", "")
+    if not notify:
+        return f"{len(failed)} failures but NOTIFY_EMAIL unset — no email sent.", 200
+
+    lines = [f"{len(failed)} failed job(s) in the last 24 hours:\n"]
+    for j in failed:
+        lines.append(
+            f"- {j.get('timestamp','?')[:19]}  "
+            f"{j.get('preacher_name','?')}  <{j.get('email','?')}>\n"
+            f"    URL:   {j.get('source_url','—')}\n"
+            f"    Error: {(j.get('error_msg') or '—')[:200]}"
+        )
+    lines.append("\nAdmin dashboard: https://www.mypreachingcoach.org/admin/status?key=" + admin_key)
+    body = "\n".join(lines)
+
+    try:
+        import sendgrid as sg_module
+        from sendgrid.helpers.mail import Mail
+        client = sg_module.SendGridAPIClient(os.getenv("SENDGRID_API_KEY", ""))
+        client.send(Mail(
+            from_email=os.getenv("FROM_EMAIL", ""),
+            to_emails=notify,
+            subject=f"[MyPreachingCoach] {len(failed)} failure(s) in the last 24h",
+            plain_text_content=body,
+        ))
+    except Exception as e:
+        return f"{len(failed)} failures — email send FAILED: {e}", 500
+
+    return f"Digest sent to {notify} — {len(failed)} failure(s).", 200
 
 
 @app.route("/admin/status")

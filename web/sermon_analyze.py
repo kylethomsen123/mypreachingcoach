@@ -152,15 +152,25 @@ def acquire_audio(source: str, tmpdir: str) -> str:
             print("  URL extraction failed — falling back to full yt-dlp download (uses proxy bandwidth).")
 
     # Original single-step path: yt-dlp handles everything (proxy routes all traffic when set).
-    subprocess.run(
-        [_ytdlp_bin(), "-x", "--audio-format", "mp3"]
-        + _ytdlp_base_args()
-        + ["-o", os.path.join(tmpdir, "%(title)s.%(ext)s"), source],
-        check=True,
-    )
-    files = list(Path(tmpdir).glob("*.mp3"))
-    if not files: sys.exit("yt-dlp produced no mp3.")
-    return str(files[0])
+    # One retry on transient bot-block: the Webshare proxy IP may have rotated in the interim.
+    last_err = None
+    for attempt in (1, 2):
+        try:
+            subprocess.run(
+                [_ytdlp_bin(), "-x", "--audio-format", "mp3"]
+                + _ytdlp_base_args()
+                + ["-o", os.path.join(tmpdir, "%(title)s.%(ext)s"), source],
+                check=True,
+            )
+            files = list(Path(tmpdir).glob("*.mp3"))
+            if not files: sys.exit("yt-dlp produced no mp3.")
+            return str(files[0])
+        except subprocess.CalledProcessError as e:
+            last_err = e
+            if attempt == 1:
+                print(f"  yt-dlp attempt 1 failed ({e}) — waiting 30s then retrying once ...")
+                time.sleep(30)
+    raise last_err
 
 
 def _extract_direct_audio_url(youtube_url: str) -> str | None:
