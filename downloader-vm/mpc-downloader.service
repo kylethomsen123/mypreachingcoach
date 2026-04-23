@@ -1,0 +1,30 @@
+[Unit]
+Description=MPC Downloader (yt-dlp microservice for mypreachingcoach.org)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mpc-downloader
+EnvironmentFile=/opt/mpc-downloader/config.env
+ExecStart=/opt/mpc-downloader/venv/bin/gunicorn \
+  --bind 0.0.0.0:8000 \
+  --workers 2 \
+  --threads 2 \
+  --timeout 900 \
+  --access-logfile - \
+  --error-logfile - \
+  app:app
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Hardening
+PrivateTmp=false
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/tmp /opt/mpc-downloader/logs
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

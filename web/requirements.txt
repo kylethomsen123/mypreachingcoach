@@ -12,3 +12,4 @@ yt-dlp>=2025.1.1
 PySocks
 gspread
 google-auth
+requests

@@ -20,6 +20,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, url_for
 
+import downloader_client
+
 # Load .env from the same directory as this file
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -703,20 +705,10 @@ def run_detection_background(pending_id: str) -> None:
             import tempfile as _tf
             tmpdir = _tf.mkdtemp(prefix="detection_")
             url    = pending["source_url"]
-            print(f"[detection] Downloading for diarization: {url}")
-            proxy = os.getenv("YTDLP_PROXY", "")
-            cmd   = ["yt-dlp", "-x", "--audio-format", "mp3",
-                     "--no-playlist", "--retries", "3",
-                     "--js-runtimes", "node",
-                     "--remote-components", "ejs:github",
-                     "-o", os.path.join(tmpdir, "%(title)s.%(ext)s"), url]
-            if proxy:
-                cmd += ["--proxy", proxy, "--no-check-certificate"]
-            subprocess.run(cmd, check=True, capture_output=True, timeout=600)
-            mp3s = list(Path(tmpdir).glob("*.mp3"))
-            if not mp3s:
-                raise RuntimeError("yt-dlp produced no mp3")
-            audio_path = str(mp3s[0])
+            print(f"[detection] Downloading for diarization via Hetzner VM: {url}")
+            audio_path, meta = downloader_client.download(url, tmpdir, timeout=900)
+            print(f"[detection] Downloaded {os.path.basename(audio_path)} "
+                  f"(used_proxy={meta.get('used_proxy')}, direct_failure={meta.get('direct_failure')})")
             pending["tmp_path"] = audio_path   # store so confirm POST can use it
 
         # ── Run AssemblyAI diarization ────────────────────────────────────────
@@ -823,24 +815,12 @@ def normalize_youtube_url(url: str) -> str:
 
 
 def probe_url_duration(url: str) -> float:
-    """
-    Uses yt-dlp --dump-json to get video duration in seconds without downloading.
-    Returns 0.0 on failure or if the URL isn't a supported yt-dlp source.
-    """
+    """Get video duration via the Hetzner downloader VM. Returns 0.0 on failure."""
     try:
-        proxy = os.getenv("YTDLP_PROXY", "")
-        cmd   = ["yt-dlp", "--dump-json", "--no-warnings", "--no-playlist",
-                 "--socket-timeout", "20"]
-        if proxy:
-            cmd += ["--proxy", proxy]
-        cmd.append(url)
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        if result.returncode == 0 and result.stdout.strip():
-            info = json.loads(result.stdout.strip())
-            return float(info.get("duration") or 0)
+        info = downloader_client.probe(url, timeout=60)
+        return float(info.get("duration") or 0)
     except Exception:
-        pass
-    return 0.0
+        return 0.0
 
 
 # ── Background job ─────────────────────────────────────────────────────────────
@@ -1509,27 +1489,29 @@ if __name__ == "__main__":
 
 @app.route("/health")
 def health():
-    """Diagnostic endpoint — checks ffmpeg and yt-dlp."""
-    import shutil, subprocess as sp
+    """Diagnostic endpoint — checks ffmpeg locally + downloader VM end-to-end."""
+    import shutil
     checks = {}
 
     checks["ffmpeg"] = shutil.which("ffmpeg") or "NOT FOUND"
-    checks["yt-dlp"] = shutil.which("yt-dlp") or "NOT FOUND"
     checks["ASSEMBLYAI_API_KEY"] = "SET" if os.environ.get("ASSEMBLYAI_API_KEY") else "NOT SET"
     checks["SERMON_DETECTION"] = os.environ.get("SERMON_DETECTION", "NOT SET")
+    checks["DOWNLOADER_URL"] = os.environ.get("DOWNLOADER_URL") or "NOT SET"
+    checks["DOWNLOADER_SECRET"] = "SET" if os.environ.get("DOWNLOADER_SECRET") else "NOT SET"
 
-    # Test yt-dlp can reach YouTube
+    # VM reachability
     try:
-        cmd = ["yt-dlp", "--dump-json", "--no-warnings", "--no-playlist",
-               "--socket-timeout", "10", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
-        r = sp.run(cmd, capture_output=True, text=True, timeout=15)
-        if r.returncode == 0:
-            import json as j
-            info = j.loads(r.stdout.strip())
-            checks["yt-dlp_youtube"] = f"OK — {info.get('title', '?')}"
-        else:
-            checks["yt-dlp_youtube"] = f"FAIL (rc={r.returncode}) — {r.stderr[:200]}"
+        h = downloader_client.health(timeout=10)
+        checks["downloader_vm"] = f"OK — yt-dlp {h.get('yt_dlp')} proxy={h.get('proxy_configured')}"
     except Exception as e:
-        checks["yt-dlp_youtube"] = f"ERROR — {e}"
+        checks["downloader_vm"] = f"UNREACHABLE — {e}"
+
+    # End-to-end: probe a known-good YouTube video through the VM
+    try:
+        info = downloader_client.probe("https://www.youtube.com/watch?v=dQw4w9WgXcQ", timeout=30)
+        checks["youtube_probe"] = (f"OK — {info.get('title','?')[:60]} "
+                                   f"(used_proxy={info.get('used_proxy')})")
+    except Exception as e:
+        checks["youtube_probe"] = f"FAIL — {e}"
 
     return checks
