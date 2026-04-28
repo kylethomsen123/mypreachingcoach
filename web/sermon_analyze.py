@@ -1663,6 +1663,10 @@ def main():
                     help="Submitter email address (passed from web app for usage logging)")
     ap.add_argument("--source-type", default=None, dest="source_type",
                     help="Source type for logging: youtube, podcast, file_upload, local_file")
+    ap.add_argument("--out-dir", default=None, dest="out_dir",
+                    help="Override output directory for the .pdf/.json (default: reports/personal/). "
+                         "Set this to a per-job tempdir from the web app to avoid concurrent-job "
+                         "races where two analyses could otherwise write the same filename.")
     args = ap.parse_args()
 
     start_time = time.monotonic()   # used for processing_time_sec in usage log
@@ -1723,9 +1727,10 @@ def main():
         if not speaker:
             speaker = "Unknown Speaker"
 
-    # ── Ensure output directories exist ───────────────────────────────────────
-    os.makedirs(REPORTS_PERSONAL, exist_ok=True)
-    os.makedirs(REPORTS_BETA,     exist_ok=True)
+    # ── Resolve output directory (per-job tempdir if --out-dir, else default) ─
+    out_dir = args.out_dir or REPORTS_PERSONAL
+    os.makedirs(out_dir,       exist_ok=True)
+    os.makedirs(REPORTS_BETA,  exist_ok=True)
 
     # ── Base log fields (known before analysis begins) ────────────────────────
     _log_fields = {
@@ -1780,8 +1785,8 @@ def main():
             safe_name  = re.sub(r"[^\w]+", "_", speaker)
             title_slug = re.sub(r"[^\w]+", "_", analysis.get("sermon_title", "sermon"))[:35]
             base       = f"sermon_eval_{title_slug}_{safe_name}"
-            json_path  = os.path.join(REPORTS_PERSONAL, f"{base}.json")
-            pdf_path   = os.path.join(REPORTS_PERSONAL, f"{base}.pdf")
+            json_path  = os.path.join(out_dir, f"{base}.json")
+            pdf_path   = os.path.join(out_dir, f"{base}.pdf")
 
             with open(json_path, "w") as f:
                 json.dump({

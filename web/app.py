@@ -9,6 +9,7 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 import threading
 import subprocess
 import time
@@ -906,7 +907,11 @@ def process_sermon(name: str, source: str, email: str,
     )
     print(f"[job] Starting — id={job_id[:8]}  preacher={name!r}  email={email!r}  type={source_type}")
 
-    existing_pdfs = set(REPORTS_PERSONAL.glob("*.pdf"))
+    # Per-job output dir so concurrent analyses can't see each other's PDFs.
+    # Without this, two jobs running in parallel could trip the old "new_pdfs = current - snapshot"
+    # logic — Job A finishes first, moves its PDF out, Job B's diff comes back empty.
+    # (Raquel Farmer 2026-04-21: "No PDF found in reports/personal/ after analysis".)
+    job_out_dir = Path(tempfile.mkdtemp(prefix=f"job_{job_id[:8]}_", dir="/tmp"))
 
     try:
         log_job(job_id, status="analyzing")
@@ -918,7 +923,8 @@ def process_sermon(name: str, source: str, email: str,
             log_src_type = "file_upload"
 
         cmd = [sys.executable, str(SCRIPT), source, "--name", name,
-               "--email", email, "--source-type", log_src_type]
+               "--email", email, "--source-type", log_src_type,
+               "--out-dir", str(job_out_dir)]
         if start_sec is not None and end_sec is not None:
             cmd += ["--start-sec", str(start_sec), "--end-sec", str(end_sec)]
         print(f"[job] Running: {' '.join(cmd)}")
@@ -946,21 +952,17 @@ def process_sermon(name: str, source: str, email: str,
             print(result.stdout[-1000:])
 
         # ── Find the newly created PDF ────────────────────────────────────────
-        new_pdfs = set(REPORTS_PERSONAL.glob("*.pdf")) - existing_pdfs
-        if not new_pdfs:
-            all_pdfs = sorted(REPORTS_PERSONAL.glob("*.pdf"),
-                              key=lambda p: p.stat().st_mtime)
-            if not all_pdfs:
-                log_job(job_id,
-                    status       = "error",
-                    error_msg    = "No PDF found in reports/personal/ after analysis",
-                    duration_sec = round(time.monotonic() - start_time, 1),
-                )
-                print("[job] ERROR: No PDF found in reports/personal/")
-                return
-            new_pdfs = {all_pdfs[-1]}
-
-        pdf_src = sorted(new_pdfs, key=lambda p: p.stat().st_mtime)[-1]
+        # Deterministic now that sermon_analyze.py wrote into our per-job dir.
+        pdfs = list(job_out_dir.glob("*.pdf"))
+        if not pdfs:
+            log_job(job_id,
+                status       = "error",
+                error_msg    = f"No PDF found in {job_out_dir.name}/ after analysis",
+                duration_sec = round(time.monotonic() - start_time, 1),
+            )
+            print(f"[job] ERROR: No PDF found in {job_out_dir}")
+            return
+        pdf_src = pdfs[0]
 
         # ── Extract sermon title from JSON before moving ───────────────────────
         json_src     = pdf_src.with_suffix(".json")
@@ -1018,6 +1020,8 @@ def process_sermon(name: str, source: str, email: str,
             os.remove(tmp_path)
             print(f"[job] Cleaned up temp file: {tmp_path}")
             _rmdir_if_detection_tmpdir(Path(tmp_path).parent)
+        # Per-job tempdir is short-lived; remove regardless of outcome.
+        shutil.rmtree(job_out_dir, ignore_errors=True)
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
