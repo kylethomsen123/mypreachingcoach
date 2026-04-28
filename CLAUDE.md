@@ -48,25 +48,20 @@ Automatically finds the sermon within a full church service recording.
 
 ---
 
-## YouTube URL Handling — CRITICAL
+## YouTube URL Handling
 
-**The problem:** YouTube Live URLs (`youtube.com/live/VIDEO_ID`) get bot-blocked on Railway's server IPs. Regular watch URLs (`youtube.com/watch?v=VIDEO_ID`) work fine.
+**Live URL normalization:** `normalize_youtube_url()` in `web/app.py` converts `/live/VIDEO_ID` → `/watch?v=VIDEO_ID` and strips `?si=` tracking params. Applied before probe AND before analysis.
 
-**The fix (deployed 3a09302):** `normalize_youtube_url()` in `app.py` auto-converts at form submission:
-- `/live/VIDEO_ID` → `/watch?v=VIDEO_ID`
-- Strips `?si=` tracking parameters
-- Applied before probe AND before analysis
+**Downloads run on the Hetzner VM, not on Railway.** Railway calls `web/downloader_client.py` which POSTs to `http://178.104.232.247:8000/{probe,download}` with an `X-Auth-Token` shared secret. The VM tries `yt-dlp` direct first; on bot-check or SABR failure it retries through a DataImpulse residential proxy (~$1/GB).
 
-**If bot blocks return for watch URLs too:**
-- The hook is already in the code: `YTDLP_PROXY` env var
-- Solution: residential proxy service (Webshare, Oxylabs ~$10-20/mo)
-- Set `YTDLP_PROXY=socks5://user:pass@host:port` in Railway — no code change needed
-- Do NOT suggest per-user browser cookies — this is a multi-user tool
+**VM code lives in `downloader-vm/` in this repo** but is NOT auto-deployed. To ship a VM change: edit, `scp` to `/opt/mpc-downloader/`, then `systemctl daemon-reload && systemctl restart mpc-downloader`. Always check `ps aux | grep yt-dlp` first to avoid killing in-flight downloads.
 
-**WARP proxy (deleted April 11, 2026):**
-- `docker-warp-socks` service was deleted — Railway doesn't grant NET_ADMIN capability so it never worked
-- `YTDLP_PROXY` was never set, so yt-dlp never routed through it regardless
-- Previous downloads worked because they used watch URLs, not because of WARP
+**Cookies / bgutil PO-token are intentionally NOT used** — testing on 2026-04-23 showed they triggered SABR "no formats" errors more often than they helped. Do not add them back without re-testing end-to-end. Do NOT suggest per-user browser cookies — this is a multi-user tool.
+
+**If bot blocks become persistent again:**
+- First check the VM journal: `journalctl -u mpc-downloader --since '1 hour ago' | grep -E 'bot-check|sabr'`
+- The DataImpulse proxy is the existing fallback — confirm it's still configured in `/opt/mpc-downloader/config.env` as `DATAIMPULSE_PROXY`
+- Re-test bgutil PO-token (yt-dlp's behavior shifts often)
 
 ---
 
@@ -172,14 +167,19 @@ Claude should still ask before:
 | 2026-04-11 | YouTube bot block | `/live/` URL format triggers bot detection on server IPs | `normalize_youtube_url()` converts to `/watch?v=` at form submission |
 | 2026-04-11 | Job interrupted | Pushed deploy while job was running | Always check admin/status for active jobs before pushing |
 | 2026-04-11 | Detection returned 12-min block in 95-min service | Old algorithm only checked dominant speaker's longest block | New: all speakers + 7-min merge gap + Claude sanity check |
+| 2026-04-23 | Webshare hit $30/mo bandwidth cap, returned 402 | Flat-rate proxy was exhausting on long sermons | Migrated yt-dlp to Hetzner VM + DataImpulse residential proxy fallback (~$5–10/mo total) |
+| 2026-04-28 | VM returned HTML 500 on long downloads | `subprocess.TimeoutExpired` (yt-dlp 600s limit) was unhandled and propagated up as a Flask exception | Caught `TimeoutExpired` in `_run()`, added `@app.errorhandler(Exception)` returning JSON, bumped `YT_DLP_TIMEOUT` 600→1200 and Gunicorn `--timeout` 900→1500 |
 
 ---
 
 ## Known Issues / Next Priorities
 - [ ] Rotate AssemblyAI API key — current key was shared in a chat session
 - [ ] Test improved sermon detection (Claude + 7-min gap) against Melissa's 11am Easter service
-- [ ] Consider residential proxy as backup if YouTube bot blocks return for watch URLs
+- [ ] Cancel Webshare account (already downgraded 30GB→1GB on 2026-04-28; confirm zero usage for a few more days)
+- [ ] Delete dead `YTDLP_PROXY` Railway env var (do during a quiet window — `railway variable delete` triggers a redeploy)
+- [ ] Investigate dedupe race: simultaneous submissions slip past `_find_recent_duplicate()` (Raquel Farmer 2026-04-21, Joel Cogdell 2026-04-27)
+- [ ] Decide on `sermon_analyze.py` root copy — drift risk with `web/sermon_analyze.py` for zero benefit (CLI not in use)
 
 ---
 
-*Last updated: 2026-04-11*
+*Last updated: 2026-04-28*

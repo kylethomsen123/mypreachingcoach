@@ -1,25 +1,24 @@
 version: "3.8"
 
-services:
-  warp:
-    image: ghcr.io/mon-ius/docker-warp-socks:v5
-    restart: always
-    ports:
-      - "9091:9091"
+# NOTE: Production runs on Railway, not Docker.
+# This file is for local development of the Flask app only.
+# YouTube downloads are routed to a Hetzner VM (see DOWNLOADER_URL); there is
+# no proxy sidecar to run locally. Point DOWNLOADER_URL at the live VM (or
+# stand up your own) to test URL submissions end-to-end.
 
+services:
   web:
     build: ./web
     ports:
       - "${PORT:-5050}:${PORT:-5050}"
     environment:
-      - YTDLP_PROXY=socks5://warp:9091
       - PORT=${PORT:-5050}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
       - FROM_EMAIL=${FROM_EMAIL}
       - FEEDBACK_FORM_URL=${FEEDBACK_FORM_URL}
-    depends_on:
-      - warp
-
-
+      - DOWNLOADER_URL=${DOWNLOADER_URL}
+      - DOWNLOADER_SECRET=${DOWNLOADER_SECRET}
+      - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
+      - SERMON_DETECTION=${SERMON_DETECTION:-false}

@@ -35,7 +35,7 @@ log = logging.getLogger("mpc-downloader")
 SECRET = os.environ.get("DOWNLOADER_SECRET", "").strip()
 PROXY = os.environ.get("DATAIMPULSE_PROXY", "").strip()
 YT_DLP = os.environ.get("YT_DLP_BIN", "/opt/mpc-downloader/venv/bin/yt-dlp")
-TIMEOUT_SEC = int(os.environ.get("YT_DLP_TIMEOUT", "600"))
+TIMEOUT_SEC = int(os.environ.get("YT_DLP_TIMEOUT", "1200"))
 
 if not SECRET:
     sys.exit("DOWNLOADER_SECRET not set — refusing to start")
@@ -57,11 +57,23 @@ def _run(url: str, outdir: str, use_proxy: bool, dump_json: bool) -> subprocess.
     else:
         args += ["-x", "--audio-format", "mp3", "-o", f"{outdir}/%(id)s.%(ext)s"]
     args.append(url)
-    return subprocess.run(args, capture_output=True, text=True, timeout=TIMEOUT_SEC)
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=TIMEOUT_SEC)
+    except subprocess.TimeoutExpired as e:
+        log.warning("yt-dlp timed out after %ss (proxy=%s): %s", TIMEOUT_SEC, use_proxy, url)
+        # Synthesize a failed CompletedProcess so the caller treats it like a normal yt-dlp failure
+        partial_stderr = (e.stderr.decode("utf-8", "replace") if isinstance(e.stderr, bytes)
+                          else (e.stderr or ""))
+        return subprocess.CompletedProcess(
+            args=args, returncode=124,
+            stdout="", stderr=f"timeout after {TIMEOUT_SEC}s\n{partial_stderr[-300:]}",
+        )
 
 
 def classify_failure(stderr: str) -> str:
     s = (stderr or "").lower()
+    if "timeout after" in s:
+        return "timeout"
     if "sign in to confirm" in s or "confirm you" in s:
         return "bot-check"
     if "no video formats" in s or "requested format" in s or "sabr" in s:
@@ -69,6 +81,17 @@ def classify_failure(stderr: str) -> str:
     if "video unavailable" in s or "private video" in s or "members-only" in s:
         return "unavailable"
     return "unknown"
+
+
+@app.errorhandler(Exception)
+def _json_error(e):
+    """Return JSON for unhandled exceptions so the Railway client gets a parseable error
+    instead of HTML soup. Werkzeug HTTPExceptions (404/401/etc.) keep their normal codes."""
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        return jsonify({"error": e.description, "code": e.code}), e.code
+    log.exception("unhandled exception in handler")
+    return jsonify({"error": "internal error", "detail": str(e)[:300]}), 500
 
 
 def _try_both_paths(url: str, outdir: str, dump_json: bool):
