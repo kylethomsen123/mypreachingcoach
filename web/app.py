@@ -123,14 +123,29 @@ def _find_recent_duplicate(email: str, dedupe_key: str,
 
     Dedupe key is `source_url` for URL submissions and `original_filename` for
     file uploads. Catches: same-URL re-submission (Carla Hairston case), typo
-    correction on the same uploaded file (Phillip Hale / Phillip Hald case).
-    Does NOT catch cross-source re-submission (Melissa Wall case) — that needs
-    content hashing, deferred to a later pass.
+    correction on the same uploaded file (Phillip Hale / Phillip Hald case),
+    and re-submission while a prior submission is still in the detect/confirm
+    flow (Joel Cogdell case 2026-04-27).
 
     Prior jobs with status=error / email_failed do NOT block; the user is
     trying to recover from a failure and should be allowed to retry.
     """
-    if not JOBS_FILE.exists() or not email or not dedupe_key:
+    if not email or not dedupe_key:
+        return None
+    email_lower = email.lower()
+    field = "source_url" if source_type == "url" else "original_filename"
+
+    # Sessions still in the detect/confirm flow live in /tmp/pending_*.json
+    # (they don't reach jobs.json until /confirm POST).
+    for p in Path("/tmp").glob("pending_*.json"):
+        try:
+            d = json.loads(p.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if (d.get("email") or "").lower() == email_lower and d.get(field) == dedupe_key:
+            return d
+
+    if not JOBS_FILE.exists():
         return None
     from datetime import timezone, timedelta
     cutoff = datetime.now(timezone.utc) - timedelta(hours=within_hours)
@@ -140,8 +155,6 @@ def _find_recent_duplicate(email: str, dedupe_key: str,
             return None
     except (json.JSONDecodeError, OSError):
         return None
-    email_lower = email.lower()
-    field = "source_url" if source_type == "url" else "original_filename"
     for job in reversed(jobs):
         if (job.get("email") or "").lower() != email_lower:
             continue
@@ -159,6 +172,42 @@ def _find_recent_duplicate(email: str, dedupe_key: str,
             continue
         return job
     return None
+
+
+# In-memory claim set so two parallel form-submits for the same (email, key)
+# can't both pass dedupe before either has written persistent state. The claim
+# is released as soon as a pending_*.json file or jobs.json queued row exists —
+# at that point _find_recent_duplicate() will catch any further duplicates.
+# Process-local; safe because Gunicorn runs a single worker (see web/Procfile).
+_inflight_lock = threading.Lock()
+_inflight_submissions: set[tuple[str, str]] = set()
+
+
+def _claim_submission_slot(email: str, dedupe_key: str, source_type: str) -> bool:
+    """Atomically check dedupe + reserve the (email, dedupe_key) slot.
+
+    Returns True if the slot was claimed (caller must call _release_submission_slot
+    once persistent state is written or on any error path). Returns False if a
+    duplicate is already in flight or recently submitted — caller should show the
+    user the standard duplicate-submission error.
+    """
+    if not email or not dedupe_key:
+        return True   # nothing to dedupe on; let it through
+    key = (email.lower(), dedupe_key)
+    with _inflight_lock:
+        if key in _inflight_submissions:
+            return False
+        if _find_recent_duplicate(email, dedupe_key, source_type):
+            return False
+        _inflight_submissions.add(key)
+        return True
+
+
+def _release_submission_slot(email: str, dedupe_key: str) -> None:
+    if not email or not dedupe_key:
+        return
+    with _inflight_lock:
+        _inflight_submissions.discard((email.lower(), dedupe_key))
 
 
 def _rmdir_if_detection_tmpdir(directory: Path) -> None:
@@ -1010,7 +1059,9 @@ def submit():
                       "the audio file directly instead.")
 
         # Dedupe: block a resubmission of the same URL by the same email within 24h.
-        if _find_recent_duplicate(email, source, "url"):
+        # Atomic claim covers the parallel-submit race (Raquel Farmer 2026-04-21) +
+        # the in-detect/confirm-flow case via the pending_*.json scan (Joel Cogdell 2026-04-27).
+        if not _claim_submission_slot(email, source, "url"):
             return render_template("index.html",
                 error="Looks like you submitted this same sermon in the last 24 hours. "
                       "Your previous report should arrive shortly — if it didn't, "
@@ -1043,6 +1094,8 @@ def submit():
                         target=run_detection_background,
                         args=(pending_id,), daemon=True,
                     ).start()
+                    # Pending file exists now; subsequent dupes will hit it. Free the in-flight slot.
+                    _release_submission_slot(email, source)
                     return redirect(url_for("detecting_page", pending_id=pending_id))
             except Exception as _e:
                 print(f"[detection] URL duration probe failed ({_e}) — proceeding normally")
@@ -1064,7 +1117,8 @@ def submit():
         original_filename = file.filename
 
         # Dedupe: same email uploaded this same filename in the last 24h.
-        if _find_recent_duplicate(email, original_filename, "file"):
+        # Atomic claim — see URL branch above for race details.
+        if not _claim_submission_slot(email, original_filename, "file"):
             return render_template("index.html",
                 error="Looks like you uploaded this same file in the last 24 hours. "
                       "Your previous report should arrive shortly — if it didn't, "
@@ -1108,6 +1162,8 @@ def submit():
                     target=run_detection_background,
                     args=(pending_id,), daemon=True,
                 ).start()
+                # Pending file exists now; subsequent dupes will hit it. Free the in-flight slot.
+                _release_submission_slot(email, original_filename)
                 return redirect(url_for("detecting_page", pending_id=pending_id))
         except Exception as _det_err:
             print(f"[detection] Failed to start detection ({_det_err}) — proceeding normally")
@@ -1143,6 +1199,8 @@ def submit():
     )
     thread.start()
 
+    # Queued row is now in jobs.json; subsequent dupes will hit it. Free the in-flight slot.
+    _release_submission_slot(email, source if source_type == "url" else original_filename)
     return redirect(url_for("submitted"))
 
 
