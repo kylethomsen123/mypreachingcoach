@@ -95,7 +95,8 @@ Automatically finds the sermon within a full church service recording.
    → Any status=started or status=analyzing? If yes, WAIT.
 
 3. curl https://www.mypreachingcoach.org/health
-   → All green? yt-dlp_youtube OK? ASSEMBLYAI_API_KEY SET?
+   → downloader_vm starts with "OK"? youtube_probe starts with "OK"?
+     ASSEMBLYAI_API_KEY=SET? DOWNLOADER_SECRET=SET? ffmpeg path present?
 ```
 
 **Before recommending deletion of any service or env var:**
