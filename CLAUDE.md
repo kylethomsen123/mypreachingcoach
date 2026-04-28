@@ -30,10 +30,10 @@ It transcribes a sermon (from YouTube URL or local file), analyzes acoustics, an
 - **Evaluation:** Claude API (`claude-sonnet-4-6`)
 - **Output:** PDF emailed via SendGrid
 
-### CLI (`sermon_analyze.py`) — reference copy, not actively used
-- Repo copy at `sermon_analyze.py` (root); deployed copy at `web/sermon_analyze.py`
-- The two files must stay in sync for any report-logic change
-- Kyle does not run the CLI locally — the web app is the only live workflow
+### Analysis script (`web/sermon_analyze.py`)
+- Single deployed copy invoked by `web/app.py` as a subprocess.
+- Kyle does not run a CLI locally — the web app is the only live workflow.
+- A duplicate at the repo root used to exist as a "reference copy" but it drifted; deleted 2026-04-28.
 
 ---
 
@@ -155,7 +155,7 @@ Claude should still ask before:
 - Deleting files or reports from the Railway volume
 - Deleting Railway services or env vars
 - Changing the SendGrid API key or other credential env vars
-- Making changes to the sermon_analyze.py prompt or scoring logic
+- Making changes to `web/sermon_analyze.py`'s prompt or scoring logic
 
 ---
 
@@ -169,6 +169,8 @@ Claude should still ask before:
 | 2026-04-11 | Detection returned 12-min block in 95-min service | Old algorithm only checked dominant speaker's longest block | New: all speakers + 7-min merge gap + Claude sanity check |
 | 2026-04-23 | Webshare hit $30/mo bandwidth cap, returned 402 | Flat-rate proxy was exhausting on long sermons | Migrated yt-dlp to Hetzner VM + DataImpulse residential proxy fallback (~$5–10/mo total) |
 | 2026-04-28 | VM returned HTML 500 on long downloads | `subprocess.TimeoutExpired` (yt-dlp 600s limit) was unhandled and propagated up as a Flask exception | Caught `TimeoutExpired` in `_run()`, added `@app.errorhandler(Exception)` returning JSON, bumped `YT_DLP_TIMEOUT` 600→1200 and Gunicorn `--timeout` 900→1500 |
+| 2026-04-28 | Same-second + detection-flow duplicate submissions both processed (Raquel Farmer, Joel Cogdell) | Dedupe-check + queued-row-write was non-atomic; detection flow's `pending_*.json` wasn't scanned by dedupe | Added `_claim_submission_slot()` (in-memory lock around dedupe + claim) and made `_find_recent_duplicate()` scan `/tmp/pending_*.json` |
+| 2026-04-28 | "No PDF found in reports/personal/ after analysis" when two jobs ran in parallel | `process_sermon` used a `current - snapshot` glob diff; if Job A finished and moved its PDF before Job B looked, Job B saw an empty diff | `sermon_analyze.py` now accepts `--out-dir`; `process_sermon` creates a per-job tempdir so each job's output is isolated |
 
 ---
 
@@ -177,8 +179,8 @@ Claude should still ask before:
 - [ ] Test improved sermon detection (Claude + 7-min gap) against Melissa's 11am Easter service
 - [ ] Cancel Webshare account (already downgraded 30GB→1GB on 2026-04-28; confirm zero usage for a few more days)
 - [ ] Delete dead `YTDLP_PROXY` Railway env var (do during a quiet window — `railway variable delete` triggers a redeploy)
-- [ ] Investigate dedupe race: simultaneous submissions slip past `_find_recent_duplicate()` (Raquel Farmer 2026-04-21, Joel Cogdell 2026-04-27)
-- [ ] Decide on `sermon_analyze.py` root copy — drift risk with `web/sermon_analyze.py` for zero benefit (CLI not in use)
+- [ ] When the next 30-min timeout hits, grep the captured stdout for `[timing]` lines — they identify which phase ate the clock
+- [ ] Re-test bgutil PO-token on the VM (yt-dlp behavior shifts; last tested 2026-04-23, may help reduce residual bot-checks)
 
 ---
 

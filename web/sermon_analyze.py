@@ -1741,15 +1741,24 @@ def main():
         "sermon_type":   args.sermon_type,
     }
 
+    # Per-phase timing. When a job hits the 30-min subprocess timeout in app.py,
+    # the last [timing] line in the captured log tells us which phase to chase.
+    def _phase_done(label: str, phase_start: float) -> None:
+        print(f"[timing] phase={label} elapsed={time.monotonic() - phase_start:.1f}s "
+              f"total={time.monotonic() - start_time:.1f}s")
+
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             print("\n[1/4] Acquiring audio ...")
+            _t = time.monotonic()
             mp3 = acquire_audio(source, tmpdir)
             print(f"  Ready: {mp3}")
+            _phase_done("acquire", _t)
 
             # ── Trim to sermon window if --start-sec / --end-sec were provided ────
             if args.start_sec is not None and args.end_sec is not None:
                 print(f"  Trimming to sermon window: {args.start_sec}s – {args.end_sec}s ...")
+                _t = time.monotonic()
                 trimmed = os.path.join(tmpdir, "sermon_trimmed.mp3")
                 subprocess.run([
                     "ffmpeg", "-y", "-i", mp3,
@@ -1759,26 +1768,33 @@ def main():
                 ], check=True, capture_output=True)
                 mp3 = trimmed
                 print(f"  Trimmed audio ready: {mp3}")
+                _phase_done("trim", _t)
             # ─────────────────────────────────────────────────────────────────────
 
             print("\n[2/4] Transcribing with Whisper ...")
+            _t = time.monotonic()
             transcript = transcribe(mp3)
+            _phase_done("whisper", _t)
 
             print("\n[3/4] Acoustic analysis ...")
+            _t = time.monotonic()
             acoustic = acoustic_analysis(mp3, transcript)
             print(f"  {acoustic['duration_min']}min | {acoustic['estimated_wpm']}wpm | "
                   f"fillers:{acoustic['filler_count']}({acoustic['filler_per_minute']}/min) | "
                   f"pauses:{acoustic['pause_count']} | dr:{acoustic['dynamic_range_db']}dB | "
                   f"arc:{acoustic['arc_pattern']}")
+            _phase_done("acoustic", _t)
 
             has_audio = True   # always True for current audio-based workflow
 
             print("\n[4/4] Evaluating with Claude (claude-sonnet-4-6) ...")
             print(f"  Sermon type: {args.sermon_type}")
+            _t = time.monotonic()
             analysis     = evaluate_with_claude(transcript, speaker, acoustic,
                                                  sermon_type=args.sermon_type,
                                                  has_audio=has_audio)
             gospel_check = analysis["gospel_check"]
+            _phase_done("claude", _t)
 
             print_terminal(speaker, acoustic, analysis)
 

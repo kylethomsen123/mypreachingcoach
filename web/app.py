@@ -999,13 +999,17 @@ def process_sermon(name: str, source: str, email: str,
             )
             print(f"[job] email FAILED: {email_exc}")
 
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as toe:
+        # Surface the last [timing] lines so we can see which phase was running.
+        partial = (toe.stdout or "") if isinstance(toe.stdout, str) else (toe.stdout or b"").decode("utf-8", "replace")
+        timing_lines = [ln for ln in partial.splitlines() if "[timing]" in ln]
+        last_timing = timing_lines[-1] if timing_lines else "no [timing] lines captured"
         log_job(job_id,
             status       = "error",
-            error_msg    = "Analysis timed out after 30 minutes",
+            error_msg    = f"Analysis timed out after 30 minutes — last phase: {last_timing[:200]}",
             duration_sec = round(time.monotonic() - start_time, 1),
         )
-        print("[job] ERROR: Analysis timed out after 30 minutes.")
+        print(f"[job] ERROR: Analysis timed out after 30 minutes. Last phase: {last_timing}")
         send_failure_email(email, name)
     except Exception as exc:
         log_job(job_id,
