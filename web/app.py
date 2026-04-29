@@ -945,6 +945,7 @@ def process_sermon(name: str, source: str, email: str,
                 error_msg    = f"script exited {result.returncode}: {result.stderr[-300:]}",
                 duration_sec = round(time.monotonic() - start_time, 1),
             )
+            send_failure_email(email, name)
             return
 
         print("[job] Analysis complete.")
@@ -961,6 +962,7 @@ def process_sermon(name: str, source: str, email: str,
                 duration_sec = round(time.monotonic() - start_time, 1),
             )
             print(f"[job] ERROR: No PDF found in {job_out_dir}")
+            send_failure_email(email, name)
             return
         pdf_src = pdfs[0]
 
