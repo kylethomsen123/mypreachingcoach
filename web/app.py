@@ -102,7 +102,7 @@ def _validate_preacher_name(name: str) -> str | None:
     stripped = name.strip()
     if len(stripped) < 4:
         return "Please enter the preacher's full name (first and last)."
-    if stripped.lower() in _PLACEHOLDER_NAMES:
+    if any(tok in _PLACEHOLDER_NAMES for tok in stripped.lower().split()):
         return "Please enter the preacher's full name (first and last)."
     if " " not in stripped:
         return "Please enter the preacher's full name — first and last."
@@ -395,6 +395,46 @@ def send_failure_email(to_email: str, preacher_name: str):
         print(f"[failure_email] Sent to {to_email} — HTTP {resp.status_code}")
     except Exception as e:
         print(f"[failure_email] FAILED sending apology to {to_email}: {e}")
+
+
+def send_not_a_sermon_email(to_email: str, preacher_name: str, reason: str = ""):
+    """Tell the user we couldn't process their submission because it didn't
+    look like a sermon. Non-blocking."""
+    import sendgrid as sg_module
+    from sendgrid.helpers.mail import Mail
+
+    api_key    = os.getenv("SENDGRID_API_KEY", "")
+    from_email = os.getenv("FROM_EMAIL", "")
+    if not api_key or not from_email or "@" not in (to_email or ""):
+        return
+
+    greeting = f"Hey {preacher_name}," if preacher_name else "Hey there,"
+    reason_clause = (
+        f" It looked more like {reason}."
+        if reason and reason.lower() != "not a sermon" else ""
+    )
+    body = (
+        f"{greeting}\n\n"
+        f"Thanks for trying My Preaching Coach. We took a look at the recording "
+        f"you submitted, and it doesn't look like a sermon to us.{reason_clause}\n\n"
+        "If this is a mistake — for example, the recording starts with a long "
+        "intro before the actual sermon — just reply to this email and I'll "
+        "take a look. Or you can re-submit at https://www.mypreachingcoach.org "
+        "with the sermon trimmed to start where the preaching begins.\n\n"
+        "Kyle Thomsen\n"
+        "MyPreachingCoach\n"
+    )
+
+    try:
+        client = sg_module.SendGridAPIClient(api_key)
+        resp   = client.send(Mail(
+            from_email=from_email, to_emails=to_email,
+            subject="That didn't look like a sermon — quick check",
+            plain_text_content=body,
+        ))
+        print(f"[not_a_sermon_email] Sent to {to_email} — HTTP {resp.status_code}")
+    except Exception as e:
+        print(f"[not_a_sermon_email] FAILED sending to {to_email}: {e}")
 
 
 def send_report_email(to_email: str, preacher_name: str, pdf_path: str,
@@ -936,6 +976,25 @@ def process_sermon(name: str, source: str, email: str,
             timeout=1800,   # 30-minute hard limit
             stdin=subprocess.DEVNULL,
         )
+
+        # rc=3 is sermon_analyze.EXIT_NOT_A_SERMON: preflight rejected the
+        # recording. Send a different email and tag the job distinctly so
+        # admin can tell rejections apart from real failures.
+        if result.returncode == 3:
+            stderr_tail = result.stderr[-500:] if result.stderr else ""
+            reason = ""
+            for line in stderr_tail.splitlines():
+                if line.startswith("[preflight] Rejected"):
+                    reason = line.split("—", 1)[-1].strip() if "—" in line else ""
+                    break
+            print(f"[job] Preflight rejected — reason={reason!r}")
+            log_job(job_id,
+                status       = "rejected_not_sermon",
+                error_msg    = f"Preflight: {reason}" if reason else "Preflight rejected",
+                duration_sec = round(time.monotonic() - start_time, 1),
+            )
+            send_not_a_sermon_email(email, name, reason=reason)
+            return
 
         if result.returncode != 0:
             print(f"[job] ERROR: script exited {result.returncode}")

@@ -274,10 +274,14 @@ def acoustic_analysis(mp3_path: str, transcript: str) -> dict:
     e1 = float(np.sqrt(np.mean(y[:t].astype(np.float64)**2)    + 1e-10))
     e2 = float(np.sqrt(np.mean(y[t:2*t].astype(np.float64)**2) + 1e-10))
     e3 = float(np.sqrt(np.mean(y[2*t:].astype(np.float64)**2)  + 1e-10))
-    if   e3 >= e2 >= e1: arc_pattern = "building"
-    elif e2 >= e3 >= e1: arc_pattern = "peaks-middle"
-    elif e3 >= e1:       arc_pattern = "recovery"
-    else:                arc_pattern = "declining"
+    # "front-loaded" distinguishes a deliberate high-energy opening that lands
+    # in quiet reflection (intentional rhetorical choice) from a sermon that
+    # ran out of steam. Both have e3 < e1; the ratio threshold separates them.
+    if   e3 >= e2 >= e1:                     arc_pattern = "building"
+    elif e2 >= e3 >= e1:                     arc_pattern = "peaks-middle"
+    elif e3 >= e1:                           arc_pattern = "recovery"
+    elif e1 >= e2 >= e3 and e1 >= 1.15 * e3: arc_pattern = "front-loaded"
+    else:                                    arc_pattern = "declining"
 
     def s_wpm(v):
         if 130<=v<=165: return 10
@@ -315,7 +319,7 @@ def acoustic_analysis(mp3_path: str, transcript: str) -> dict:
         if 70<=p<78 or 92<p<=96: return 7
         return 4
     def s_arc(pat):
-        return {"building":10,"recovery":8,"peaks-middle":6,"declining":4}.get(pat, 5)
+        return {"building":10,"recovery":8,"front-loaded":8,"peaks-middle":6,"declining":4}.get(pat, 5)
 
     return {
         "duration_min":        round(dur_min, 1),
@@ -474,7 +478,9 @@ filler:       <0.5/min=10, <1.0=8, <2.0=6, <3.5=4, else 2
 pace:         130-165wpm=10, 120-180=8, 100-200=6, else lower
 rhetorical_variation (dynamic range): >=35dB=10, >=28=8, >=20=6, >=14=4, else 2
 pitch_variety:cv>=0.28=10, >=0.20=8, >=0.12=6, >=0.06=4, else 2{pitch_variety_note}
-rhetorical_arc:   building=10, recovery=8, peaks-middle=6, declining=4
+rhetorical_arc:   building=10, recovery=8, front-loaded=8, peaks-middle=6, declining=4
+                  front-loaded = vivid/strong opening that lands in deliberate quiet reflection (intentional, valid arc).
+                  declining    = energy drop without rhetorical purpose (lost the room).
 verbal_clarity:   Score 1-10 based on word choice simplicity, sentence length, jargon avoidance,
                   and how accessible the language is to a general audience.
                   10=exceptionally clear, 7=mostly clear with minor jargon, 4=often complex or unclear.
@@ -491,6 +497,64 @@ CONSTRAINTS ON LANGUAGE (apply to every narrative, note, growth edge, encouragem
 - Write each growth edge in language specific to this sermon. Reference a concrete moment, illustration, or phrase the preacher actually used.
 - Avoid stock preaching-coach vocabulary unless it's the most precise word available.
 """
+
+
+# Exit code used by main() when the preflight rejects the recording. app.py's
+# process_sermon() reads this to send the "doesn't look like a sermon" email
+# instead of the generic failure email.
+EXIT_NOT_A_SERMON = 3
+
+
+def looks_like_sermon(transcript: str) -> tuple[bool, str]:
+    """Cheap classifier: is the opening of this recording a Christian sermon?
+
+    Runs on the first ~2500 chars (~500 tokens) using Haiku. Returns
+    (True, "") if it looks like a sermon, otherwise (False, reason) where
+    reason is a short human phrase suitable for the rejection email
+    ("a wedding homily", "a lecture", "worship music with no preaching", etc.).
+
+    Conservative on ambiguity — if Haiku isn't sure, returns True so we don't
+    block legitimate sermons with unusual openings.
+    """
+    sample = (transcript or "").strip()[:2500]
+    if len(sample) < 200:
+        # Too short to classify — let the regular pipeline handle it (Whisper
+        # may have failed, or the audio may be empty); this isn't our job.
+        return True, ""
+
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    try:
+        msg = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=80,
+            messages=[{"role": "user", "content":
+                "You are classifying audio recordings. Below is the opening of one. "
+                "Reply with exactly one line: either\n"
+                "  YES\n"
+                "or\n"
+                "  NO: <short phrase describing what it is instead, e.g. 'a wedding homily', "
+                "'a lecture', 'worship music with no preaching', 'a Bible study Q&A'>\n\n"
+                "Reply YES if it is a Christian sermon preached to a congregation, "
+                "even with an unusual opening (story, joke, quiet reflection, etc.).\n"
+                "Reply NO only if you are confident it is something else.\n\n"
+                f"OPENING:\n{sample}"
+            }],
+        )
+        text = (msg.content[0].text or "").strip()
+    except Exception as e:
+        # Don't fail the whole job because Haiku had a hiccup.
+        print(f"[preflight] Classifier call failed ({e}) — proceeding as sermon")
+        return True, ""
+
+    if text.upper().startswith("YES"):
+        return True, ""
+    if text.upper().startswith("NO"):
+        # Strip "NO:" prefix to get the reason phrase.
+        reason = text.split(":", 1)[1].strip() if ":" in text else "not a sermon"
+        return False, reason
+    # Unparseable response — be conservative.
+    print(f"[preflight] Unparseable classifier response: {text!r} — proceeding as sermon")
+    return True, ""
 
 
 def evaluate_with_claude(transcript: str, speaker: str, acoustic: dict,
@@ -1775,6 +1839,13 @@ def main():
             _t = time.monotonic()
             transcript = transcribe(mp3)
             _phase_done("whisper", _t)
+
+            # Preflight: reject recordings that aren't sermons before we spend
+            # Sonnet eval + acoustic compute on them.
+            ok, why = looks_like_sermon(transcript)
+            if not ok:
+                print(f"[preflight] Rejected — {why}", file=sys.stderr)
+                sys.exit(EXIT_NOT_A_SERMON)
 
             print("\n[3/4] Acoustic analysis ...")
             _t = time.monotonic()
