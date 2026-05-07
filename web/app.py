@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 import downloader_client
 
@@ -1471,6 +1471,33 @@ def admin_resend():
     </form>
     </body></html>"""
     return form
+
+
+@app.route("/admin/scores")
+def admin_scores():
+    """Return all logged scores from the Google Sheet usage log as JSON.
+    Columns returned: timestamp, preacher_name, duration_min, overall_score,
+    gospel_check_total, gold_standard_flag, success."""
+    admin_key = os.getenv("ADMIN_KEY", "")
+    if request.args.get("key") != admin_key or not admin_key:
+        return "Unauthorized", 403
+
+    try:
+        from usage_logger import _get_credentials, SPREADSHEET_ID, SHEET_NAME
+        import gspread
+        creds = _get_credentials()
+        if not creds:
+            return jsonify({"error": "service_account credentials not found"}), 500
+        gc = gspread.authorize(creds)
+        ws = gc.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
+        rows = ws.get_all_records()
+    except Exception as e:
+        return jsonify({"error": f"sheet read failed: {e}"}), 500
+
+    keep = ("timestamp", "preacher_name", "duration_min", "overall_score",
+            "gospel_check_total", "gold_standard_flag", "success")
+    out = [{k: r.get(k, "") for k in keep} for r in rows]
+    return jsonify({"count": len(out), "rows": out})
 
 
 @app.route("/admin/mark-all-reported")
