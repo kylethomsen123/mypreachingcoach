@@ -1490,13 +1490,19 @@ def admin_scores():
             return jsonify({"error": "service_account credentials not found"}), 500
         gc = gspread.authorize(creds)
         ws = gc.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
-        rows = ws.get_all_records()
+        values = ws.get_all_values()
     except Exception as e:
         return jsonify({"error": f"sheet read failed: {e}"}), 500
 
+    if not values:
+        return jsonify({"count": 0, "rows": []})
+    headers = values[0]
     keep = ("timestamp", "preacher_name", "duration_min", "overall_score",
             "gospel_check_total", "gold_standard_flag", "success")
-    out = [{k: r.get(k, "") for k in keep} for r in rows]
+    idx = {k: headers.index(k) for k in keep if k in headers}
+    out = []
+    for row in values[1:]:
+        out.append({k: (row[i] if i < len(row) else "") for k, i in idx.items()})
     return jsonify({"count": len(out), "rows": out})
 
 
