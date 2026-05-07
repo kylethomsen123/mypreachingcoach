@@ -568,7 +568,8 @@ def get_audio_duration(path: str) -> float:
             capture_output=True, text=True, timeout=30,
         )
         return float(result.stdout.strip())
-    except Exception:
+    except Exception as e:
+        print(f"[detection] ffprobe failed on {path}: {e}")
         return 0.0
 
 
@@ -1625,6 +1626,21 @@ def health():
     checks["SERMON_DETECTION"] = os.environ.get("SERMON_DETECTION", "NOT SET")
     checks["DOWNLOADER_URL"] = os.environ.get("DOWNLOADER_URL") or "NOT SET"
     checks["DOWNLOADER_SECRET"] = "SET" if os.environ.get("DOWNLOADER_SECRET") else "NOT SET"
+    checks["SENDGRID_API_KEY"] = "SET" if os.environ.get("SENDGRID_API_KEY") else "NOT SET"
+    checks["FROM_EMAIL"] = os.environ.get("FROM_EMAIL") or "NOT SET"
+    checks["ANTHROPIC_API_KEY"] = "SET" if os.environ.get("ANTHROPIC_API_KEY") else "NOT SET"
+    checks["OPENAI_API_KEY"] = "SET" if os.environ.get("OPENAI_API_KEY") else "NOT SET"
+
+    # Usage logger: either base64 env var OR a service-account JSON file on disk
+    if os.environ.get("GOOGLE_SA_JSON_B64", "").strip():
+        checks["usage_logger"] = "SET (GOOGLE_SA_JSON_B64)"
+    else:
+        sa_paths = [
+            os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""),
+            "/app/service_account.json",
+        ]
+        found = next((p for p in sa_paths if p and os.path.isfile(p)), None)
+        checks["usage_logger"] = f"SET ({found})" if found else "NOT SET"
 
     # VM reachability
     try:

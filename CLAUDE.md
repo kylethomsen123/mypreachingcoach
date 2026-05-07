@@ -179,10 +179,9 @@ Claude should still ask before:
 - [ ] Rotate AssemblyAI API key — current key was shared in a chat session
 - [ ] Test improved sermon detection (Claude + 7-min gap) against Melissa's 11am Easter service
 - [ ] Cancel Webshare account (already downgraded 30GB→1GB on 2026-04-28; confirm zero usage for a few more days)
-- [ ] Delete dead `YTDLP_PROXY` Railway env var (do during a quiet window — `railway variable delete` triggers a redeploy)
 - [ ] When the next 30-min timeout hits, grep the captured stdout for `[timing]` lines — they identify which phase ate the clock
 - [ ] Re-test bgutil PO-token on the VM (yt-dlp behavior shifts; last tested 2026-04-23, may help reduce residual bot-checks)
 
 ---
 
-*Last updated: 2026-04-28*
+*Last updated: 2026-05-07*
